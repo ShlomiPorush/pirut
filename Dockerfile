@@ -1,4 +1,4 @@
-FROM node:24.20.0-trixie-slim AS build
+FROM node:26.6.0-trixie-slim AS build
 WORKDIR /app
 ENV CI=true
 RUN corepack enable
@@ -9,14 +9,14 @@ COPY config ./config
 COPY src ./src
 RUN pnpm run build
 
-FROM node:24.20.0-trixie-slim AS deps
+FROM node:26.6.0-trixie-slim AS deps
 WORKDIR /app
 ENV CI=true
 RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --prod
 
-FROM node:24.20.0-trixie-slim AS runtime
+FROM node:26.6.0-trixie-slim AS runtime
 ENV NODE_ENV=production \
     PIRUT_HOST=0.0.0.0 \
     PIRUT_PORT=4610 \
