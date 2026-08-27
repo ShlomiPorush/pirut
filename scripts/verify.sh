@@ -136,6 +136,31 @@ check_hebrew_guard() {
   fi
 }
 
+# A real statement reaching this public repository is unrecoverable: it is financial data
+# about a named person, and rewriting history does not un-publish it. An ignore rule is one
+# typo away from failing, so tracked content is checked directly.
+check_no_statement_files() {
+  local tracked
+  tracked="$(
+    git -C "${REPO_ROOT}" ls-files -- \
+      '*.xlsx' '*.xls' '*.csv' '*.pdf' 'internal/*' |
+      grep -v '^tests/fixtures/' || true
+  )"
+  if [[ -n "${tracked}" ]]; then
+    printf 'Statement-shaped files are tracked outside tests/fixtures/:\n%s\n' "${tracked}" >&2
+    printf 'Real financial data must never be committed. Sanitized fixtures belong in tests/fixtures/.\n' >&2
+    return 1
+  fi
+
+  # A fixture must be deliberate, so any that exists has to be reviewed at least once.
+  local fixtures
+  fixtures="$(git -C "${REPO_ROOT}" ls-files -- 'tests/fixtures/*' || true)"
+  if [[ -n "${fixtures}" && ! -f "${REPO_ROOT}/tests/fixtures/SANITIZATION.md" ]]; then
+    printf 'tests/fixtures/ has tracked files but no SANITIZATION.md recording how they were sanitized.\n' >&2
+    return 1
+  fi
+}
+
 check_compose_contract() {
   local file rendered status=0
 
@@ -482,6 +507,7 @@ fi
 if [[ "${RUN_REPO}" == "1" ]]; then
   run_check "format" bash -c "cd '${REPO_ROOT}' && pnpm run format:check"
   run_check "public-ready Hebrew guard" check_hebrew_guard
+  run_check "no committed statements" check_no_statement_files
   run_check "shell scripts" check_scripts_shell
   run_check "env example safety" check_env_example_is_safe
 fi
