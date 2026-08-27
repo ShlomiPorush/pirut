@@ -3,6 +3,9 @@ import en from "../../src/locales/en/common.json" with { type: "json" };
 import he from "../../src/locales/he/common.json" with { type: "json" };
 import { DEFAULT_LOCALE, LOCALE_DIRECTION, SUPPORTED_LOCALES } from "../../src/locales/index.ts";
 
+// Escapes rather than literal characters, so this file stays free of Hebrew itself.
+const HEBREW_BLOCK = /[\u0590-\u05FF]/;
+
 type Catalog = Record<string, unknown>;
 
 function flatten(value: Catalog, prefix = ""): Map<string, unknown> {
@@ -49,7 +52,12 @@ describe("locale catalogs", () => {
 
   it("keeps the English catalog free of Hebrew characters", () => {
     for (const [key, value] of englishKeys) {
-      expect(/[֐-׿]/.test(String(value)), `en.${key}`).toBe(false);
+      expect(HEBREW_BLOCK.test(String(value)), `en.${key}`).toBe(false);
     }
+  });
+
+  it("provides each locale's own name in its own catalog", () => {
+    expect(HEBREW_BLOCK.test(String(hebrewKeys.get("language.native")))).toBe(true);
+    expect(englishKeys.get("language.native")).toBe("English");
   });
 });

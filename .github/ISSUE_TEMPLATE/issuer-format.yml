@@ -1,0 +1,69 @@
+name: Issuer format support
+description: Request support for an Israeli card issuer's statement export, or report that an existing importer misreads one.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Pirut cannot accept a real statement file. Adding issuer support requires a synthetic or
+        irreversibly sanitized sample: real merchant names, card numbers, amounts, and dates must
+        be replaced, not merely blurred or partially masked.
+
+        Describe the file's structure here. Do not attach the file itself unless it has been
+        sanitized and you are willing for it to be published in a public repository.
+
+  - type: checkboxes
+    id: no-real-data
+    attributes:
+      label: Data safety
+      options:
+        - label: Anything I attach or paste is synthetic or irreversibly sanitized.
+          required: true
+        - label: I understand this repository is public and anything I attach becomes public.
+          required: true
+
+  - type: input
+    id: issuer
+    attributes:
+      label: Issuer
+      description: The card issuer, for example Isracard, max, or Cal.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: file-type
+    attributes:
+      label: Export file type
+      options:
+        - XLSX
+        - XLS
+        - CSV
+        - TXT
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: columns
+    attributes:
+      label: Columns and structure
+      description: List the column headers in order, and note header rows, summary rows, or multiple sheets. Use placeholder values, not real ones.
+    validations:
+      required: true
+
+  - type: textarea
+    id: semantics
+    attributes:
+      label: Financial semantics present in this export
+      description: |
+        Note which of these the file contains and how it represents them: purchase date versus
+        charge date, installments and their index and total, refunds, foreign currency and exchange
+        rate, pending versus final rows, multiple cards, fees, interest, and cash withdrawals.
+    validations:
+      required: true
+
+  - type: input
+    id: encoding
+    attributes:
+      label: Encoding and date format
+      description: For example UTF-8 or windows-1255, and whether dates read as day-month-year.

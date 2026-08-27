@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# shellcheck source=scripts/lib/common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 
 readonly REGISTRY_IMAGE="ghcr.io/shlomiporush/pirut"
@@ -65,8 +66,9 @@ check_source_state() {
   branch="$(git -C "${REPO_ROOT}" rev-parse --abbrev-ref HEAD)"
   [[ "${branch}" == "main" ]] || fail "Releases run from main; currently on ${branch}."
 
-  git -C "${REPO_ROOT}" diff --quiet && git -C "${REPO_ROOT}" diff --cached --quiet ||
+  if ! git -C "${REPO_ROOT}" diff --quiet || ! git -C "${REPO_ROOT}" diff --cached --quiet; then
     fail "The working tree has uncommitted changes."
+  fi
 
   git -C "${REPO_ROOT}" fetch origin main --quiet
   local local_head remote_head

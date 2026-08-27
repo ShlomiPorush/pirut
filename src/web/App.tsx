@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   LOCALE_DIRECTION,
-  LOCALE_NATIVE_NAME,
+  LOCALE_NATIVE_NAME_KEY,
   SUPPORTED_LOCALES,
   isSupportedLocale,
   type SupportedLocale,
@@ -118,7 +118,8 @@ export default function App() {
           >
             {SUPPORTED_LOCALES.map((value) => (
               <option key={value} value={value}>
-                {LOCALE_NATIVE_NAME[value]}
+                {/* Each option shows its own language's name, not the active language's. */}
+                {t(LOCALE_NATIVE_NAME_KEY, { lng: value })}
               </option>
             ))}
           </select>
