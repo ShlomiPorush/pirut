@@ -53,6 +53,9 @@ a Linux-native path: a Windows-drive path under `/mnt/` cannot hold a PostgreSQL
 that mount rejects the ownership changes `initdb` requires. `scripts/local.sh init` selects a
 suitable default.
 
+Backups are created and restored through `scripts/local.sh`; the procedure and its rules are
+documented in [docs/backup-and-restore.md](docs/backup-and-restore.md).
+
 ## Privacy
 
 Pirut processes files locally. It uses no bank credentials, sends no telemetry, and transfers no
