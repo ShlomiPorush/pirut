@@ -1,4 +1,7 @@
 {
+  "language": {
+    "native": "English"
+  },
   "app": {
     "name": "Pirut",
     "tagline": "Understand your Israeli credit card spending"

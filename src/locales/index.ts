@@ -9,10 +9,9 @@ export const LOCALE_DIRECTION: Record<SupportedLocale, "rtl" | "ltr"> = {
   en: "ltr",
 };
 
-export const LOCALE_NATIVE_NAME: Record<SupportedLocale, string> = {
-  he: "עברית",
-  en: "English",
-};
+// Each locale's own name lives in its catalog under `language.native`, so this module
+// stays free of Hebrew and the public-ready language guard has nothing to flag here.
+export const LOCALE_NATIVE_NAME_KEY = "language.native";
 
 export function isSupportedLocale(value: string): value is SupportedLocale {
   return (SUPPORTED_LOCALES as readonly string[]).includes(value);

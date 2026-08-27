@@ -5,11 +5,13 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/verify.sh [--full | --changed] [--base <git-ref>]
+Usage: scripts/verify.sh [--full | --changed] [--base <git-ref>] [--only <area>]
 
   --full     Run every check. This is the default and the release gate.
   --changed  Run only the areas affected by changes against the base ref.
   --base     Base ref for --changed. Defaults to origin/main, then main.
+  --only     Restrict to one area: repo, app, or docker. CI uses this to split the
+             same checks across jobs.
 
 Checks are the same commands CI runs. CI must not reimplement them.
 USAGE
@@ -17,11 +19,20 @@ USAGE
 
 MODE="full"
 BASE_REF=""
+ONLY=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --full) MODE="full" ;;
     --changed) MODE="changed" ;;
+    --only)
+      shift
+      ONLY="${1:-}"
+      case "${ONLY}" in
+        repo | app | docker) ;;
+        *) fail "--only accepts repo, app, or docker; got: ${ONLY:-empty}" ;;
+      esac
+      ;;
     --base)
       shift
       BASE_REF="${1:-}"
@@ -101,12 +112,23 @@ check_locale_completeness() {
 }
 
 # The repository is public-ready and English-only outside two exact paths.
+#
+# The pattern uses PCRE code-point escapes rather than a literal character range for two
+# reasons: a literal range fails with "Invalid collation character" under the C locale
+# these scripts run in, and escapes keep this file itself free of Hebrew.
 check_hebrew_guard() {
-  local offenders
+  local offenders exit_code
   offenders="$(
-    git -C "${REPO_ROOT}" grep -Il $'[֐-׿]' -- \
-      ':!src/locales/he/' ':!tests/fixtures/he/' || true
-  )"
+    git -C "${REPO_ROOT}" grep -IlP '[\x{0590}-\x{05FF}]' -- \
+      ':!src/locales/he/' ':!tests/fixtures/he/'
+  )" && exit_code=0 || exit_code=$?
+
+  # git grep exits 0 with matches, 1 with none, and above 1 on error. An error must fail
+  # the check rather than be mistaken for a clean result.
+  if [[ "${exit_code}" -gt 1 ]]; then
+    printf 'The Hebrew guard failed to run (git grep exit %s).\n' "${exit_code}" >&2
+    return 1
+  fi
   if [[ -n "${offenders}" ]]; then
     printf 'Hebrew text outside the approved locale and fixture paths:\n%s\n' "${offenders}" >&2
     return 1
@@ -361,10 +383,26 @@ check_integration() {
 require_node_toolchain
 [[ "${MODE}" == "changed" ]] && detect_changes
 
-run_check "format" bash -c "cd '${REPO_ROOT}' && pnpm run format:check"
-run_check "public-ready Hebrew guard" check_hebrew_guard
-run_check "shell scripts" check_scripts_shell
-run_check "env example safety" check_env_example_is_safe
+# --only narrows the run to one area without changing any check's definition.
+if [[ -n "${ONLY}" ]]; then
+  RUN_REPO=0
+  RUN_APP=0
+  RUN_DOCKER=0
+  case "${ONLY}" in
+    repo) RUN_REPO=1 ;;
+    app) RUN_APP=1 ;;
+    docker) RUN_DOCKER=1 ;;
+  esac
+else
+  RUN_REPO=1
+fi
+
+if [[ "${RUN_REPO}" == "1" ]]; then
+  run_check "format" bash -c "cd '${REPO_ROOT}' && pnpm run format:check"
+  run_check "public-ready Hebrew guard" check_hebrew_guard
+  run_check "shell scripts" check_scripts_shell
+  run_check "env example safety" check_env_example_is_safe
+fi
 
 if [[ "${RUN_APP}" == "1" ]]; then
   run_check "lint" bash -c "cd '${REPO_ROOT}' && pnpm run lint"

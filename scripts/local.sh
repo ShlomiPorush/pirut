@@ -14,7 +14,12 @@ Operations:
   up-detached   Build, start detached, and verify readiness, runtime identity, and image identity.
   down          Stop services and remove orphans. Durable data is preserved.
   status        Show service health, image identities, mounts, and port bindings.
+  backup        Write a consistent pg_dump into the durable backups directory.
+  restore <f>   Restore a backup into a clean database after interactive confirmation.
   nuke          Delete the validated development data directory after interactive confirmation.
+
+A backup contains real financial data. It follows the same access and retention rules as the
+live database and must never be committed or shared.
 USAGE
 }
 
@@ -124,6 +129,75 @@ op_status() {
   fi
 }
 
+require_db_running() {
+  local health
+  health="$(dev_compose ps --format '{{.Service}} {{.Health}}' | awk '$1 == "db" {print $2}')"
+  [[ "${health}" == "healthy" ]] ||
+    fail "The db service is not healthy. Run 'scripts/local.sh up-detached' first."
+}
+
+op_backup() {
+  require_dev_compose
+  require_docker
+  require_db_running
+
+  local user db stamp target
+  user="$(env_value POSTGRES_USER)"
+  db="$(env_value POSTGRES_DB)"
+  # The timestamp comes from the database container so backups sort consistently
+  # regardless of the host's clock or time zone.
+  stamp="$(dev_compose exec -T db date -u '+%Y%m%dT%H%M%SZ' | tr -d '\r')"
+  target="/backups/${db}-${stamp}.dump"
+
+  log "Writing ${target}"
+  # Custom format: compressed, and restorable into a clean database with pg_restore.
+  dev_compose exec -T db pg_dump -U "${user}" -d "${db}" --format=custom --file="${target}"
+
+  local host_path="$(resolve_data_dir)/backups/${db}-${stamp}.dump"
+  [[ -s "${host_path}" ]] || fail "The backup file is missing or empty: ${host_path}"
+  log "Backup complete: ${host_path} ($(wc -c <"${host_path}") bytes)"
+  printf '%s\n' "${host_path}"
+}
+
+op_restore() {
+  require_dev_compose
+  require_docker
+  require_db_running
+
+  local source="${1:-}"
+  [[ -n "${source}" ]] || fail "Usage: scripts/local.sh restore <backup-file>"
+
+  local data_dir backups_dir resolved
+  data_dir="$(resolve_data_dir)"
+  backups_dir="${data_dir}/backups"
+  # Accept either a bare file name inside the backups directory or a full path,
+  # but never a path outside it.
+  [[ "${source}" = /* ]] && resolved="$(realpath -m "${source}")" ||
+    resolved="$(realpath -m "${backups_dir}/${source}")"
+  [[ "${resolved}" == "${backups_dir}/"* ]] ||
+    fail "Refusing to restore from outside ${backups_dir}: ${resolved}"
+  [[ -s "${resolved}" ]] || fail "Backup file not found or empty: ${resolved}"
+
+  local user db container_path
+  user="$(env_value POSTGRES_USER)"
+  db="$(env_value POSTGRES_DB)"
+  container_path="/backups/${resolved#"${backups_dir}/"}"
+
+  printf 'This replaces every row in the "%s" database with the contents of:\n  %s\n' \
+    "${db}" "${resolved}"
+  printf "Type the database name to confirm: "
+  local answer
+  read -r answer
+  [[ "${answer}" == "${db}" ]] || fail "Confirmation did not match. Nothing was restored."
+
+  # Restore into a clean database. --clean --if-exists drops existing objects first, so
+  # the result reflects the backup rather than a merge with current state.
+  log "Restoring into ${db}"
+  dev_compose exec -T db pg_restore -U "${user}" -d "${db}" \
+    --clean --if-exists --no-owner --single-transaction "${container_path}"
+  log "Restore complete. Verify the expected records before removing any older backup."
+}
+
 op_nuke() {
   require_dev_compose
   require_docker
@@ -160,6 +234,11 @@ main() {
     up-detached) op_up_detached ;;
     down) op_down ;;
     status) op_status ;;
+    backup) op_backup ;;
+    restore)
+      shift
+      op_restore "${1:-}"
+      ;;
     nuke) op_nuke ;;
     -h | --help | help | "") usage ;;
     *)

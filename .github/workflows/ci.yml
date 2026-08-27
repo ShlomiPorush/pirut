@@ -1,0 +1,180 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      full:
+        description: Run every job regardless of changed paths
+        type: boolean
+        default: true
+  schedule:
+    # Weekly full sweep that ignores path filters.
+    - cron: "17 4 * * 1"
+
+concurrency:
+  # Superseded pull request runs are cancelled; main, manual, and scheduled runs are not.
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Detect affected areas
+    runs-on: ubuntu-24.04
+    outputs:
+      app: ${{ steps.decide.outputs.app }}
+      docker: ${{ steps.decide.outputs.docker }}
+      scripts: ${{ steps.decide.outputs.scripts }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            shared:
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'tsconfig.json'
+              - 'vitest.config.ts'
+              - 'eslint.config.mjs'
+              - '.node-version'
+              - '.prettierignore'
+              - '.gitattributes'
+              - 'config/**'
+              - '.github/workflows/**'
+            app:
+              - 'src/**'
+              - 'tests/**'
+              - 'db/**'
+            docker:
+              - 'Dockerfile'
+              - '.dockerignore'
+              - 'docker-compose.yml'
+              - '.env.example'
+            scripts:
+              - 'scripts/**'
+
+      - name: Decide which jobs run
+        id: decide
+        env:
+          FORCE_FULL: ${{ github.event_name != 'pull_request' }}
+          SHARED: ${{ steps.filter.outputs.shared }}
+          APP: ${{ steps.filter.outputs.app }}
+          DOCKER: ${{ steps.filter.outputs.docker }}
+          SCRIPTS: ${{ steps.filter.outputs.scripts }}
+        run: |
+          set -Eeuo pipefail
+          # Shared roots and tooling invalidate every consumer. Anything outside a
+          # pull request runs everything.
+          if [[ "${FORCE_FULL}" == "true" || "${SHARED}" == "true" ]]; then
+            app=true; docker=true; scripts=true
+          else
+            app="${APP}"; docker="${DOCKER}"; scripts="${SCRIPTS}"
+          fi
+          {
+            echo "app=${app}"
+            echo "docker=${docker}"
+            echo "scripts=${scripts}"
+          } >>"${GITHUB_OUTPUT}"
+          echo "app=${app} docker=${docker} scripts=${scripts}" >>"${GITHUB_STEP_SUMMARY}"
+
+  always:
+    name: Repository-wide checks
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+
+      - name: Enable pnpm
+        run: corepack enable pnpm
+
+      - name: Install from the lockfile
+        run: pnpm install --frozen-lockfile
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install --yes shellcheck
+
+      - name: Repository-wide checks
+        # verify.sh owns every check definition. CI selects an area rather than
+        # restating the commands, so local runs and CI can never drift apart.
+        run: ./scripts/verify.sh --only repo
+
+  app:
+    name: Application
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+
+      - name: Enable pnpm
+        run: corepack enable pnpm
+
+      - name: Install from the lockfile
+        run: pnpm install --frozen-lockfile
+
+      - name: Application checks
+        run: ./scripts/verify.sh --only app
+
+  docker:
+    name: Docker and integration
+    needs: changes
+    if: needs.changes.outputs.docker == 'true' || needs.changes.outputs.app == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+
+      - name: Enable pnpm
+        run: corepack enable pnpm
+
+      - name: Install from the lockfile
+        run: pnpm install --frozen-lockfile
+
+      - name: Docker, Compose, and integration checks
+        run: ./scripts/verify.sh --only docker
+
+  summary:
+    name: CI summary
+    needs: [changes, always, app, docker]
+    # Always runs so it is safe as a required check when area jobs are intentionally skipped.
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Report
+        env:
+          ALWAYS: ${{ needs.always.result }}
+          APP: ${{ needs.app.result }}
+          DOCKER: ${{ needs.docker.result }}
+          CHANGES: ${{ needs.changes.result }}
+        run: |
+          set -Eeuo pipefail
+          printf 'changes=%s always=%s app=%s docker=%s\n' \
+            "${CHANGES}" "${ALWAYS}" "${APP}" "${DOCKER}" >>"${GITHUB_STEP_SUMMARY}"
+          for result in "${CHANGES}" "${ALWAYS}" "${APP}" "${DOCKER}"; do
+            # A skipped job is an intentional path-filter outcome, not a failure.
+            if [[ "${result}" != "success" && "${result}" != "skipped" ]]; then
+              echo "A required job did not succeed." >&2
+              exit 1
+            fi
+          done
+          echo "All required jobs succeeded or were intentionally skipped."

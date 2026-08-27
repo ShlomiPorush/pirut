@@ -1,0 +1,51 @@
+name: Bug report
+description: Something in Pirut does not work as expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Pirut handles financial data. Never attach a real statement, real transactions,
+        an account or card number, or any credential. Redact or synthesize anything you share.
+
+  - type: checkboxes
+    id: no-real-data
+    attributes:
+      label: Data safety
+      options:
+        - label: This report contains no real financial data, account or card numbers, or credentials.
+          required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you observe, and what did you expect instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Run scripts/local.sh up-detached
+        2. Open http://127.0.0.1:4610/
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system, WSL distribution, Docker version, and the output of `scripts/local.sh status` with any secrets removed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output
+      description: Error messages or logs, with merchant names and personal identifiers removed.
+      render: text
