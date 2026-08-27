@@ -1,0 +1,23 @@
+# Local runtime configuration
+.env
+.env.*
+!.env.example
+
+# Machine-local Docker development definition
+docker-compose-dev.yml
+
+# Sensitive and durable local data
+data/
+backups/
+tmp/
+
+# Editor and operating system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Test and build output
+coverage/
+dist/
+build/
