@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title description">
+  <title id="title">Pirut icon</title>
+  <desc id="description">Three organized layers in navy, teal, and coral on a rounded cream tile.</desc>
+  <defs>
+    <linearGradient id="tile" x1="180" y1="100" x2="850" y2="930" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fffdf7"/>
+      <stop offset="1" stop-color="#fff7e9"/>
+    </linearGradient>
+    <linearGradient id="navy" x1="300" y1="230" x2="720" y2="470" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#082e5d"/>
+      <stop offset="1" stop-color="#123f74"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="265" y1="455" x2="750" y2="610" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#08a9a3"/>
+      <stop offset="1" stop-color="#10beb0"/>
+    </linearGradient>
+    <linearGradient id="coral" x1="285" y1="630" x2="770" y2="760" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff604b"/>
+      <stop offset="1" stop-color="#ff7058"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="52" y="52" width="920" height="920" rx="238" fill="url(#tile)" stroke="#eee4d6" stroke-width="2"/>
+
+  <path fill="url(#navy)" d="M273 318 459 210c33-19 70-19 103 0l185 107c31 18 31 48 0 67L558 493c-31 18-66 19-98 1L272 386c-34-20-34-48 1-68Z"/>
+
+  <path fill="url(#teal)" d="m267 477 51-29c13-8 27-8 41 0l91 52c27 16 52 15 76 0l120-73c20-13 41-14 62-2l49 27c34 19 34 47 0 64-16 8-36 13-57 16-45 7-81 26-111 57l-43 43c-36 36-80 43-126 17l-153-86c-39-22-39-64 0-86Z"/>
+
+  <path fill="url(#coral)" d="m284 634 32-18c13-8 27-8 41 0l82 47c43 25 83 25 121-2 26-18 47-45 70-69l17-17c22-22 47-26 74-11l54 30c38 21 39 55 1 77L552 800c-39 23-78 23-117 1l-151-87c-39-22-39-58 0-80Z"/>
+</svg>
