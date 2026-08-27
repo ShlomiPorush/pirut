@@ -341,15 +341,53 @@ NODE
 }
 
 check_dependency_audit() {
-  (cd "${REPO_ROOT}" && pnpm audit --prod --audit-level high)
+  # Production dependencies are held to a stricter bar: anything moderate or worse fails,
+  # because that code runs against real financial data.
+  (cd "${REPO_ROOT}" && pnpm audit --prod --audit-level moderate) || return 1
+  # Development dependencies fail only on high and critical. A build-time advisory is
+  # real but does not reach the running application, so it should not block routine work.
+  (cd "${REPO_ROOT}" && pnpm audit --audit-level high) || return 1
+}
+
+# The Drizzle toolchain loads its TypeScript config through a loader whose esbuild version
+# is pinned by an override. Running generate proves that chain still works, and an
+# unexpected new migration means a schema change was committed without one.
+check_migration_generation() {
+  (cd "${REPO_ROOT}" && PIRUT_DATABASE_URL="postgres://unused" pnpm run db:generate >/dev/null) || {
+    printf 'drizzle-kit could not generate migrations.\n' >&2
+    return 1
+  }
+  local dirty
+  dirty="$(git -C "${REPO_ROOT}" status --porcelain -- db/migrations)"
+  if [[ -n "${dirty}" ]]; then
+    printf 'Generating migrations changed db/migrations. Commit the generated migration:\n%s\n' \
+      "${dirty}" >&2
+    return 1
+  fi
 }
 
 check_lockfile_is_current() {
-  (cd "${REPO_ROOT}" && pnpm install --frozen-lockfile --lockfile-only >/dev/null)
-  git -C "${REPO_ROOT}" diff --quiet -- pnpm-lock.yaml || {
-    printf 'pnpm-lock.yaml is out of date with package.json.\n' >&2
+  # The question is whether the lockfile agrees with the manifests, not whether it has
+  # been committed yet. Comparing against HEAD would fail on legitimate uncommitted
+  # dependency work, so compare the file against itself across a resolution run.
+  local before after
+  before="$(mktemp)"
+  after="$(mktemp)"
+  cp "${REPO_ROOT}/pnpm-lock.yaml" "${before}"
+
+  if ! (cd "${REPO_ROOT}" && pnpm install --frozen-lockfile --lockfile-only >/dev/null 2>&1); then
+    printf 'pnpm refused to resolve from the committed lockfile. It is out of date with the manifests.\n' >&2
+    rm -f "${before}" "${after}"
     return 1
-  }
+  fi
+
+  cp "${REPO_ROOT}/pnpm-lock.yaml" "${after}"
+  if ! diff -q "${before}" "${after}" >/dev/null; then
+    printf 'Resolving dependencies changed pnpm-lock.yaml. Commit the updated lockfile.\n' >&2
+    rm -f "${before}" "${after}"
+    return 1
+  fi
+  rm -f "${before}" "${after}"
 }
 
 # --- integration ------------------------------------------------------------
@@ -455,6 +493,7 @@ if [[ "${RUN_APP}" == "1" ]]; then
   run_check "locale completeness" check_locale_completeness
   run_check "production build" bash -c "cd '${REPO_ROOT}' && pnpm run build"
   run_check "migration journal" check_migrations
+  run_check "migration generation" check_migration_generation
   run_check "lockfile is current" check_lockfile_is_current
   run_check "dependency audit" check_dependency_audit
 fi
