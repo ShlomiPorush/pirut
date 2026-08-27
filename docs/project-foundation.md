@@ -12,6 +12,7 @@ Status vocabulary:
 - `PLANNED`: required future work that is not implemented.
 - `BLOCKED`: cannot be implemented safely until the named evidence or decision exists.
 - `DEFERRED`: intentionally outside the current stage.
+- `IMPLEMENTED`: built during the foundation implementation task with recorded verification evidence.
 
 ## Current truth
 
@@ -85,7 +86,7 @@ The application must not send financial data, file contents, merchant names, ana
 | Application architecture | APPROVED | Modular monolith | The product has one user and one deployment unit; importer and domain boundaries still require explicit modules. |
 | Database | APPROVED | PostgreSQL | Chosen for Docker consistency, migrations, analytical queries, and future headroom. Data volume alone was not treated as a reason to reject SQLite. |
 | Raw upload retention | PROVISIONAL | Do not retain raw files after a committed import | Minimizes sensitive-data exposure while preserving hashes, parser version, import metadata, and normalized records for audit. Confirm after sample-file analysis. |
-| Application stack | PROVISIONAL | TypeScript on Node.js LTS, React UI, Fastify server, Drizzle ORM, pnpm | A single language across UI, import validation, and server logic; mature structured-file parsing; explicit SQL and migrations. Confirm before creating manifests. |
+| Application stack | APPROVED | TypeScript on Node.js 24 LTS, React with Vite, Fastify server, Drizzle ORM, pnpm, i18next, Vitest, ESLint, Prettier | A single language across UI, import validation, and server logic; mature structured-file parsing; explicit SQL and migrations. Approved by the owner on 2026-08-27, including the accompanying build, localization, test, and lint tooling. |
 | Docker role | APPROVED | Development and local runtime; production-ready Compose contract | Explicitly requested because the product is a web application. |
 | Compose tracking | APPROVED | Track production Compose; ignore machine-local development Compose | Keeps deployment portable while preventing machine-specific development state from entering Git. |
 | Durable storage | APPROVED | Bind-mounted project-owned host directories | Keeps PostgreSQL data and backups visible and operable on the Docker host. |
@@ -218,7 +219,7 @@ Every deliverable below is unimplemented. The next task must update status and a
 
 | Order | Deliverable | Status | Acceptance criteria | Required verification |
 |---|---|---|---|---|
-| 1 | Confirm implementation stack | BLOCKED | Owner approves the runtime, UI framework, server framework, database library, package manager, and supported Node LTS version. | Record decision and rationale before creating manifests. |
+| 1 | Confirm implementation stack | IMPLEMENTED | Owner approves the runtime, UI framework, server framework, database library, package manager, and supported Node LTS version. | Owner approved TypeScript on Node.js 24 LTS, React with Vite, Fastify, Drizzle ORM, pnpm, i18next, Vitest, ESLint, and Prettier on 2026-08-27, before any manifest was created. Recorded in the preparation decisions table. |
 | 2 | Repository baseline | PLANNED | Add changelog, exact manifests, lockfile, tool configuration in purpose-specific paths, and safe dependency policy without product features. | Inspect tracked root inventory; install strictly from lockfile; run format and config validation. |
 | 3 | Minimal runtime skeleton | PLANNED | Create only the health-capable web process, database connectivity boundary, localization shell, and empty migration baseline needed to prove infrastructure. No statement parsing or product dashboard. | Production build, unit smoke test, Hebrew and English render smoke checks, and no hard-coded user text. |
 | 4 | Production Docker image | PLANNED | Multi-stage image, locked dependencies, dedicated non-root runtime user, no embedded secrets, and meaningful health endpoint. | Build image; inspect UID; scan configuration; run health check. |
@@ -320,7 +321,6 @@ Planned after foundation CI exists:
 | Question or blocker | Why it matters | Evidence or decision needed | Owner |
 |---|---|---|---|
 | Representative issuer formats | Parser boundaries, canonical fields, encoding, and test cases cannot be invented safely. | One sanitized representative export for each intended issuer and card variant, starting with the owner's actual first issuer. | Shlomi |
-| Exact application stack | Determines manifests, lockfile, project layout, validation libraries, migrations, and CI. | Approve the provisional TypeScript, Node.js LTS, React, Fastify, Drizzle, and pnpm recommendation or record an alternative with rationale. | Shlomi |
 | Raw upload retention | Affects privacy, debugging, reproducibility, and backup size. | Confirm deletion after committed import once sample-file replay requirements are understood. | Shlomi |
 | Supported initial file types | XLSX, XLS, CSV, and TXT require different parsers and security controls. | Inspect the first real issuer export and select the minimum first format. | Shlomi |
 | Authentication boundary | Loopback-only operation can start without authentication; any wider exposure cannot. | Keep loopback-only or approve a later authentication and threat-model task before exposure. | Shlomi |
@@ -330,12 +330,12 @@ Planned after foundation CI exists:
 
 The separate foundation implementation task may start when:
 
-- The owner explicitly starts it in the Pirut repository context.
-- The provisional application stack is approved or replaced.
-- The initial issuer and minimum supported structured file format are selected from inspected evidence.
-- Any sample used for automated tests is synthetic or irreversibly sanitized and approved for public tracking.
-- Authority for GitHub Actions, Dependabot, labels, templates, settings, or branch rules is confirmed before those external changes.
-- The implementer confirms that product parsing and dashboard features remain out of scope for the foundation task.
+- The owner explicitly starts it in the Pirut repository context. Met: the owner started the foundation implementation task on 2026-08-27.
+- The provisional application stack is approved or replaced. Met: approved by the owner on 2026-08-27.
+- The initial issuer and minimum supported structured file format are selected from inspected evidence. DEFERRED by owner decision on 2026-08-27: this selection gates only issuer adapters and fixtures, which are outside the foundation scope, and it will be made when the owner provides a real sanitized export.
+- Any sample used for automated tests is synthetic or irreversibly sanitized and approved for public tracking. Not applicable to the foundation task, which uses no statement samples.
+- Authority for GitHub Actions, Dependabot, labels, templates, settings, or branch rules is confirmed before those external changes. Pending: the owner scoped the current task to local deliverables 1 through 10; GitHub-side changes wait for separate authorization.
+- The implementer confirms that product parsing and dashboard features remain out of scope for the foundation task. Confirmed by the implementer on 2026-08-27.
 
 ## Handoff to foundation implementation
 
