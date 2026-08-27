@@ -16,6 +16,8 @@ Status vocabulary:
 ## Current truth
 
 - Pirut is a new public-ready repository owned by `ShlomiPorush` and licensed under MIT.
+- The public GitHub repository is `https://github.com/ShlomiPorush/pirut`; `main` tracks `origin/main` and no branch ruleset exists yet.
+- Verified GitHub settings enable Issues, squash merge, automatic head-branch deletion, secret scanning, push protection, Dependabot security updates, and read-only default workflow permissions. Wiki, Discussions, merge commits, rebase merges, and workflow pull-request approvals are disabled. GitHub Projects remains enabled by the platform default, but no project board has been configured.
 - The repository contains only preparation documentation and repository metadata.
 - There is no product code, dependency manifest, lockfile, application runtime, database schema, migration, Docker definition, workflow script, CI workflow, release artifact, or deployment.
 - No Israeli credit card statement sample has been inspected or committed.
