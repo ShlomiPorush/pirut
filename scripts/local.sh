@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# shellcheck source=scripts/lib/common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 
 usage() {
@@ -153,7 +154,8 @@ op_backup() {
   # Custom format: compressed, and restorable into a clean database with pg_restore.
   dev_compose exec -T db pg_dump -U "${user}" -d "${db}" --format=custom --file="${target}"
 
-  local host_path="$(resolve_data_dir)/backups/${db}-${stamp}.dump"
+  local host_path
+  host_path="$(resolve_data_dir)/backups/${db}-${stamp}.dump"
   [[ -s "${host_path}" ]] || fail "The backup file is missing or empty: ${host_path}"
   log "Backup complete: ${host_path} ($(wc -c <"${host_path}") bytes)"
   printf '%s\n' "${host_path}"
@@ -172,8 +174,11 @@ op_restore() {
   backups_dir="${data_dir}/backups"
   # Accept either a bare file name inside the backups directory or a full path,
   # but never a path outside it.
-  [[ "${source}" = /* ]] && resolved="$(realpath -m "${source}")" ||
+  if [[ "${source}" = /* ]]; then
+    resolved="$(realpath -m "${source}")"
+  else
     resolved="$(realpath -m "${backups_dir}/${source}")"
+  fi
   [[ "${resolved}" == "${backups_dir}/"* ]] ||
     fail "Refusing to restore from outside ${backups_dir}: ${resolved}"
   [[ -s "${resolved}" ]] || fail "Backup file not found or empty: ${resolved}"

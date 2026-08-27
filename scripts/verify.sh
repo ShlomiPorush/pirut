@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# shellcheck source=scripts/lib/common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 
 usage() {
@@ -252,10 +253,18 @@ check_scripts_shell() {
       return 1
     fi
   done
+  # Static analysis must not be silently skipped: CI once caught real findings that a
+  # local run had waved through. Fall back to the pinned container image when the
+  # binary is absent rather than reporting a pass.
   if command -v shellcheck >/dev/null 2>&1; then
     shellcheck -x "${REPO_ROOT}"/scripts/*.sh || return 1
+  elif command -v docker >/dev/null 2>&1; then
+    log "  shellcheck is not installed; running it through Docker"
+    docker run --rm -v "${REPO_ROOT}:/mnt" -w /mnt koalaman/shellcheck:v0.11.0 \
+      -x scripts/local.sh scripts/verify.sh scripts/try-pr.sh scripts/release.sh || return 1
   else
-    warn "shellcheck is not installed; skipped static shell analysis."
+    printf 'shellcheck is unavailable and Docker is not installed, so shell analysis cannot run.\n' >&2
+    return 1
   fi
 }
 
