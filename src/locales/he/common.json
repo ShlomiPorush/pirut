@@ -1,0 +1,27 @@
+{
+  "app": {
+    "name": "פירוט",
+    "tagline": "להבין את ההוצאות בכרטיס האשראי"
+  },
+  "status": {
+    "heading": "מצב המערכת",
+    "checking": "בודק את מצב המערכת",
+    "ready": "המערכת מוכנה",
+    "degraded": "המערכת פועלת אך מסד הנתונים אינו זמין",
+    "unreachable": "לא ניתן להתחבר לשרת",
+    "databaseLabel": "מסד נתונים",
+    "databaseConnected": "מחובר",
+    "databaseDisconnected": "מנותק",
+    "retry": "בדיקה חוזרת"
+  },
+  "settings": {
+    "language": "שפה",
+    "theme": "ערכת נושא",
+    "themeLight": "בהיר",
+    "themeDark": "כהה",
+    "themeSystem": "לפי המערכת"
+  },
+  "foundation": {
+    "notice": "זהו שלד התשתית. ייבוא דפי חיוב וניתוח ההוצאות עדיין אינם ממומשים."
+  }
+}

@@ -2,9 +2,11 @@
 
 ## Current stage
 
-This repository is in project preparation. The desired-state contract is [docs/project-foundation.md](docs/project-foundation.md). Planned files, commands, services, and behavior do not exist until the plan records implementation and verification evidence.
+The repository and runtime foundation is implemented. The application starts in Docker, serves a localized interface shell, and reports health against PostgreSQL. No product feature exists yet.
 
-Do not add product code while the repository remains in preparation unless the user explicitly starts the separate foundation implementation task.
+The living contract is [docs/project-foundation.md](docs/project-foundation.md). It records what is implemented, the verification evidence, deviations forced by the environment, and what remains. Trust its status column over any assumption; a planned item does not exist until the plan records evidence.
+
+Do not add issuer parsers, statement upload behavior, categorization, or dashboards without a separate approved task.
 
 ## Product and boundaries
 
@@ -21,11 +23,11 @@ This is a public-ready repository.
 - Hebrew content is allowed only in the exact Hebrew locale and sanitized Hebrew fixture paths approved in the foundation plan.
 - Do not duplicate Hebrew test strings outside those paths.
 
-## Planned architecture
+## Architecture
 
-The approved high-level shape is a modular web monolith backed by PostgreSQL. Import adapters for each issuer must remain isolated from the canonical transaction model and from presentation code.
+The shape is a modular web monolith backed by PostgreSQL. Import adapters for each issuer must remain isolated from the canonical transaction model and from presentation code.
 
-The exact application framework and database library are provisional until approved in the foundation implementation task. Do not assume a provisional technology already exists.
+The approved stack is TypeScript on Node.js 24 LTS, React with Vite, Fastify, Drizzle ORM, pnpm, i18next, and Vitest. Source layout: `src/server/`, `src/web/`, `src/infrastructure/`, `src/locales/`, with migrations under `db/migrations/`.
 
 Uploaded financial files are sensitive. The planned default is local processing, no telemetry, no external data transfer, no bank credentials, and no retention of raw uploads after a committed import unless a later explicit decision changes that policy.
 
@@ -37,10 +39,9 @@ Do not hard-code user-facing strings in components or server responses.
 
 ## Docker
 
-Docker is part of the approved development and runtime architecture, but no Docker files or commands exist yet.
-
-- The planned tracked production definition is root-level `docker-compose.yml` and must reference published images without `build:`.
-- Root-level `docker-compose-dev.yml` is planned as machine-local and ignored. Ordinary development must invoke it only through `scripts/local.sh`.
+- The tracked production definition is root-level `docker-compose.yml` and references published images without `build:`.
+- Root-level `docker-compose-dev.yml` is machine-local and ignored. Ordinary development must invoke it only through `scripts/local.sh`.
+- `PIRUT_DATA_DIR` must be a Linux-native path. A `/mnt/` path on a Windows drive cannot hold a PostgreSQL cluster.
 - Workflow scripts must build development images explicitly before changing the running environment.
 - Application containers must run as dedicated non-root users and expose meaningful readiness checks.
 - PostgreSQL must remain on an internal Docker network unless an explicit development-only need is approved.
@@ -51,8 +52,8 @@ Docker is part of the approved development and runtime architecture, but no Dock
 
 ## Workflow and verification
 
-The canonical workflows are planned as `scripts/local.sh`, `scripts/verify.sh`, `scripts/try-pr.sh`, and `scripts/release.sh`. They must be Bash scripts executed inside WSL, use LF endings and executable modes, and resolve the repository root from their own paths.
+The canonical workflows are `scripts/local.sh`, `scripts/verify.sh`, `scripts/try-pr.sh`, and `scripts/release.sh`. They are Bash scripts executed inside WSL, use LF endings and executable modes, and resolve the repository root from their own paths.
 
-These scripts are not implemented. Do not advertise or invoke them until they exist and have been verified.
+`scripts/verify.sh --full` is the authoritative check. Run it before proposing changes. CI must call the same commands rather than reimplementing them.
 
 Parser changes require sanitized representative fixtures for the affected issuer and regression coverage for duplicate detection, installment transactions, refunds, encodings, and date semantics. Never commit real financial statements or personal data.

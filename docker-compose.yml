@@ -1,0 +1,53 @@
+name: pirut
+
+services:
+  web:
+    image: ${PIRUT_IMAGE:?PIRUT_IMAGE must be set to an immutable published image tag}
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PIRUT_HOST: 0.0.0.0
+    ports:
+      # Loopback only. Wider exposure requires an approved authentication decision.
+      - "127.0.0.1:${PIRUT_WEB_PORT:-4610}:4610"
+    networks:
+      - internal
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4610/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  db:
+    image: postgres:18.6-trixie
+    restart: unless-stopped
+    env_file:
+      - .env
+    # No published host port: PostgreSQL stays on the internal network.
+    volumes:
+      # PostgreSQL 18 stores its cluster under /var/lib/postgresql/<major>/docker.
+      - ${PIRUT_DATA_DIR:?PIRUT_DATA_DIR must be set}/postgres:/var/lib/postgresql
+      - ${PIRUT_DATA_DIR:?PIRUT_DATA_DIR must be set}/backups:/backups
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+networks:
+  internal:
+    driver: bridge

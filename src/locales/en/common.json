@@ -1,0 +1,27 @@
+{
+  "app": {
+    "name": "Pirut",
+    "tagline": "Understand your Israeli credit card spending"
+  },
+  "status": {
+    "heading": "System status",
+    "checking": "Checking system status",
+    "ready": "The application is ready",
+    "degraded": "The application is running but the database is unavailable",
+    "unreachable": "Cannot reach the application server",
+    "databaseLabel": "Database",
+    "databaseConnected": "Connected",
+    "databaseDisconnected": "Disconnected",
+    "retry": "Check again"
+  },
+  "settings": {
+    "language": "Language",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System"
+  },
+  "foundation": {
+    "notice": "This is the foundation skeleton. Statement import and analysis are not implemented yet."
+  }
+}

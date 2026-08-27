@@ -1,0 +1,155 @@
+:root {
+  color-scheme: light;
+  --surface: #ffffff;
+  --surface-raised: #f4f5f7;
+  --border: #d8dbe0;
+  --text: #14161a;
+  --text-muted: #5b6270;
+  --accent: #0a6b52;
+  --status-ready: #0a6b52;
+  --status-degraded: #8a5a00;
+  --status-error: #a11f2b;
+  --radius: 12px;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface: #101317;
+  --surface-raised: #191d23;
+  --border: #2b313a;
+  --text: #f2f4f7;
+  --text-muted: #a4acba;
+  --accent: #4fd1a5;
+  --status-ready: #4fd1a5;
+  --status-degraded: #e2b04a;
+  --status-error: #ff8189;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--surface);
+  color: var(--text);
+  font-family:
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.app {
+  margin-inline: auto;
+  max-width: 52rem;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.app__title {
+  margin: 0;
+  font-size: clamp(2.25rem, 6vw, 3.5rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.app__tagline {
+  margin: 0.25rem 0 0;
+  color: var(--text-muted);
+  font-size: 1.125rem;
+}
+
+.panel {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.panel__heading {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.status {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.status--ready {
+  color: var(--status-ready);
+}
+
+.status--degraded {
+  color: var(--status-degraded);
+}
+
+.status--unreachable {
+  color: var(--status-error);
+}
+
+.status--checking {
+  color: var(--text-muted);
+}
+
+.status__detail {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.field__label {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+button,
+select {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) / 2);
+  padding: 0.5rem 0.875rem;
+  cursor: pointer;
+}
+
+button {
+  align-self: start;
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+button:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.app__footer {
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+}
+
+@media (max-width: 30rem) {
+  .app {
+    gap: 1rem;
+  }
+}
