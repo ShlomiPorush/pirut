@@ -20,7 +20,7 @@ Status vocabulary:
 - The public GitHub repository is `https://github.com/ShlomiPorush/pirut`; `main` tracks `origin/main` and no branch ruleset exists yet.
 - Verified GitHub settings enable Issues, squash merge, automatic head-branch deletion, secret scanning, push protection, Dependabot security updates, and read-only default workflow permissions. Wiki, Discussions, merge commits, rebase merges, and workflow pull-request approvals are disabled. GitHub Projects remains enabled by the platform default, but no project board has been configured.
 - The repository contains the implemented foundation: dependency manifests and lockfile, a health-capable Fastify server, a localized React shell, a Drizzle database boundary with an empty migration baseline, the Docker image and Compose definitions, and the four workflow scripts.
-- CI, dependency automation, the security policy, issue forms, and the backup and restore procedure exist in the repository. No CI run has been observed on GitHub yet.
+- CI, dependency automation, the security policy, issue forms, and the backup and restore procedure exist and are working. CI has run green on `main` and on every pull request since it was added.
 - Repository labels, the `main` ruleset, and other GitHub settings have not been changed. They require the owner's authorization.
 - There is no release artifact and no deployment.
 - There is no statement import behavior, issuer adapter, categorization, or dashboard. Those are product features outside the foundation scope.
@@ -356,19 +356,33 @@ The separate foundation implementation task may start when:
 - The provisional application stack is approved or replaced. Met: approved by the owner on 2026-08-27.
 - The initial issuer and minimum supported structured file format are selected from inspected evidence. DEFERRED by owner decision on 2026-08-27: this selection gates only issuer adapters and fixtures, which are outside the foundation scope, and it will be made when the owner provides a real sanitized export.
 - Any sample used for automated tests is synthetic or irreversibly sanitized and approved for public tracking. Not applicable to the foundation task, which uses no statement samples.
-- Authority for GitHub Actions, Dependabot, labels, templates, settings, or branch rules is confirmed before those external changes. Pending: the owner scoped the current task to local deliverables 1 through 10; GitHub-side changes wait for separate authorization.
+- Authority for GitHub Actions, Dependabot, labels, templates, settings, or branch rules is confirmed before those external changes. Partly met: the owner authorized continuing through the remaining deliverables, so tracked workflow, Dependabot, security-policy, and issue-form files were added. Repository settings themselves, meaning labels and branch rules, were not changed and still require explicit authorization.
 - The implementer confirms that product parsing and dashboard features remain out of scope for the foundation task. Confirmed by the implementer on 2026-08-27.
 
 ## Remaining foundation work
 
-All fourteen deliverables are implemented. What remains is not repository content:
+All fourteen deliverables are implemented. Verification comprises 18 checks and 11 tests, and CI runs green on `main` and on every pull request.
 
-1. Repository settings that only the owner may authorize: focused labels beyond the GitHub defaults, and a `main` ruleset requiring a pull request and the CI summary check. The ruleset should wait until CI has been observed passing, so it cannot deadlock the owner.
-2. Confirming the first CI run on GitHub and, once it is green, adopting `CI summary` as the required check.
+CI has been observed doing real work rather than merely passing: it caught three shellcheck findings a local run had skipped, and it correctly rejected a Dependabot major Node bump that breaks the image build.
+
+What remains is not repository content:
+
+1. Repository settings that only the owner may authorize: focused `area:` and `priority:` labels beyond the GitHub defaults, and a `main` ruleset requiring a pull request and the `CI summary` check. CI is now proven green, so the ruleset can be adopted without risk of deadlocking the owner.
 
 Outstanding verification gaps:
 
-- The first CI run on pull request #4 failed the repository-wide job on three real shellcheck findings that a local run had skipped, then passed after they were fixed. This is recorded as evidence that the workflow does what it claims.
 - `scripts/try-pr.sh` has not been exercised end to end against a real pull request.
+
+## Defects found and fixed while verifying
+
+Three checks were found reporting a pass they had not earned. All three shared one shape: a failing command whose exit status was discarded. The pattern is recorded because it is worth recognising again.
+
+| Defect                                                  | How it hid                                                                                                                                                                                                | Fix                                                                                                                                                     |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The public-ready Hebrew guard never ran                 | Its literal character range made `git grep` fail with `Invalid collation character` under the C locale, and the call was wrapped so that the error became an empty result, which read as "no violations". | A locale-independent pattern, and an error in the search now fails the check. Fixing it surfaced three real violations that had been in the repository. |
+| Verification passed on a Dockerfile that does not build | `set -e` does not apply inside a function invoked as a condition, so a failed `docker build` fell through to inspecting a stale image carrying the same tag.                                              | The build result is checked explicitly, and integration is skipped rather than failing with a misleading registry error.                                |
+| The dependency audit missed a real advisory             | It inspected production dependencies only, so a build-time advisory was invisible to it while GitHub reported it.                                                                                         | Production is audited at moderate and above, development dependencies at high and above.                                                                |
+
+Two further gaps were closed: CI treated the workflow scripts as an isolated area, so changing `scripts/verify.sh` skipped the very jobs that run it; and nothing compared the Dockerfile's Node version against `.node-version` and `engines.node`, so a drift surfaced only as an unrelated build error.
 
 Do not add issuer parsers, statement upload behavior, categorization, dashboards, real financial fixtures, public deployment, or release publication without a separate approved task.
