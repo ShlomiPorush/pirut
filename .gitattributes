@@ -1,4 +1,7 @@
-* text=auto
+# Everything in this repository is consumed by Linux tooling: WSL Bash, Docker builds,
+# and Compose env_file parsing. A CRLF checkout injects carriage returns into shell
+# shebangs and environment values, so text files are normalized to LF everywhere.
+* text=auto eol=lf
 
 *.sh text eol=lf
 *.md text eol=lf
@@ -10,6 +13,11 @@
 *.css text eol=lf
 *.html text eol=lf
 *.sql text eol=lf
+
+Dockerfile text eol=lf
+.dockerignore text eol=lf
+.env.example text eol=lf
+config/docker/env.example text eol=lf
 
 *.png binary
 *.jpg binary

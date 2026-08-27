@@ -211,11 +211,17 @@ check_env_example_is_safe() {
 }
 
 check_scripts_shell() {
-  local script
+  local script relative mode
   for script in "${REPO_ROOT}"/scripts/*.sh "${REPO_ROOT}"/scripts/lib/*.sh; do
     bash -n "${script}" || return 1
-    [[ -x "${script}" ]] || {
-      printf 'Script is not executable: %s\n' "${script}" >&2
+
+    # The filesystem mode is unreliable here: a Windows drive mounted into WSL reports
+    # every file as executable. The recorded Git mode is what a fresh clone actually gets.
+    relative="${script#"${REPO_ROOT}/"}"
+    mode="$(git -C "${REPO_ROOT}" ls-files -s -- "${relative}" | awk '{print $1}')"
+    [[ "${mode}" == "100755" ]] || {
+      printf 'Script must be executable in Git (mode %s): %s\n' "${mode:-absent}" "${relative}" >&2
+      printf '  fix with: git update-index --chmod=+x %s\n' "${relative}" >&2
       return 1
     }
     # CRLF endings break the shebang inside containers and WSL.
