@@ -222,6 +222,26 @@ check_dockerfile_contract() {
     { printf 'Dockerfile must define a health check.\n' >&2 && return 1; }
   grep -qE '^FROM node:[0-9]+\.[0-9]+\.[0-9]+-' "${REPO_ROOT}/Dockerfile" ||
     { printf 'Dockerfile base images must be pinned to an exact version.\n' >&2 && return 1; }
+
+  # The image, the toolchain contract, and the engines range describe one decision.
+  # When they drift, the failure surfaces as an unrelated build error, so check it here.
+  local pinned versions unique
+  pinned="$(tr -d '[:space:]' <"${REPO_ROOT}/.node-version")"
+  versions="$(sed -n 's/^FROM node:\([0-9][^-]*\)-.*/\1/p' "${REPO_ROOT}/Dockerfile" | sort -u)"
+  unique="$(wc -l <<<"${versions}")"
+  if [[ "${unique}" -ne 1 || "${versions}" != "${pinned}" ]]; then
+    printf 'Dockerfile Node version must match .node-version (%s). Found: %s\n' \
+      "${pinned}" "$(tr '\n' ' ' <<<"${versions}")" >&2
+    return 1
+  fi
+
+  local major="${pinned%%.*}"
+  grep -q "\"node\": \">=${major} <$((major + 1))\"" "${REPO_ROOT}/package.json" ||
+    {
+      printf 'package.json engines.node must be ">=%s <%s" to match .node-version.\n' \
+        "${major}" "$((major + 1))" >&2
+      return 1
+    }
 }
 
 check_env_example_is_safe() {
@@ -269,9 +289,24 @@ check_scripts_shell() {
 }
 
 check_docker_image() {
-  docker build -t "${DEV_IMAGE}" "${REPO_ROOT}" >/dev/null
+  # `set -e` does not apply inside a function invoked as a condition, so the build result
+  # is checked explicitly. Without this, a failed build fell through to inspecting a stale
+  # image left by an earlier run and the check reported a pass.
+  local build_log
+  build_log="$(mktemp)"
+  if ! docker build -t "${DEV_IMAGE}" "${REPO_ROOT}" >"${build_log}" 2>&1; then
+    printf 'The image failed to build:\n' >&2
+    tail -n 25 "${build_log}" >&2
+    rm -f "${build_log}"
+    return 1
+  fi
+  rm -f "${build_log}"
+
   local uid
-  uid="$(docker run --rm --entrypoint id "${DEV_IMAGE}" -u)"
+  uid="$(docker run --rm --entrypoint id "${DEV_IMAGE}" -u)" || {
+    printf 'The built image could not be started.\n' >&2
+    return 1
+  }
   [[ "${uid}" != "0" ]] || {
     printf 'Image runs as root.\n' >&2
     return 1
@@ -429,7 +464,13 @@ if [[ "${RUN_DOCKER}" == "1" ]]; then
   run_check "Dockerfile contract" check_dockerfile_contract
   run_check "Compose contract" check_compose_contract
   run_check "Docker image" check_docker_image
-  run_check "integration" check_integration
+  # Integration needs the image that the previous check builds. Running it anyway would
+  # bury the real build error under a confusing "pull access denied" from Compose.
+  if [[ " ${FAILURES[*]} " == *" Docker image "* ]]; then
+    printf '\033[1;33m  skip\033[0m integration (the image did not build)\n'
+  else
+    run_check "integration" check_integration
+  fi
 fi
 
 echo

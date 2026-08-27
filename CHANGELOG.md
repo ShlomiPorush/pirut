@@ -20,4 +20,6 @@ Versioning scheme selection is deferred until the first release is prepared.
 
 ### Fixed
 
+- The Docker image check passed on a Dockerfile that does not build. `set -e` does not apply inside a function invoked as a condition, so a failed `docker build` fell through and the check inspected a stale image left by an earlier run. The build result is now checked explicitly, and the integration check is skipped rather than reporting a misleading "pull access denied" when the image is missing.
+- Nothing verified that the Dockerfile's Node version matched `.node-version` and `engines.node`. A drift surfaced only as an unrelated build error. A guard now compares all three.
 - The public-ready Hebrew guard never actually ran. Under the C locale used by the workflow scripts, its character-range pattern made `git grep` exit with `Invalid collation character`, and the error was swallowed, so the check always reported success. It now uses a locale-independent pattern and fails when the search itself fails. Fixing it surfaced real Hebrew text outside the approved locale paths, which was moved into the locale catalogs.
