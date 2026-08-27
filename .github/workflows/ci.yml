@@ -29,7 +29,6 @@ jobs:
     outputs:
       app: ${{ steps.decide.outputs.app }}
       docker: ${{ steps.decide.outputs.docker }}
-      scripts: ${{ steps.decide.outputs.scripts }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -39,6 +38,8 @@ jobs:
         id: filter
         with:
           filters: |
+            # Shared paths invalidate every area. The workflow scripts belong here
+            # because scripts/verify.sh defines every check the other jobs run.
             shared:
               - 'package.json'
               - 'pnpm-lock.yaml'
@@ -50,7 +51,8 @@ jobs:
               - '.prettierignore'
               - '.gitattributes'
               - 'config/**'
-              - '.github/workflows/**'
+              - 'scripts/**'
+              - '.github/**'
             app:
               - 'src/**'
               - 'tests/**'
@@ -60,8 +62,6 @@ jobs:
               - '.dockerignore'
               - 'docker-compose.yml'
               - '.env.example'
-            scripts:
-              - 'scripts/**'
 
       - name: Decide which jobs run
         id: decide
@@ -70,22 +70,20 @@ jobs:
           SHARED: ${{ steps.filter.outputs.shared }}
           APP: ${{ steps.filter.outputs.app }}
           DOCKER: ${{ steps.filter.outputs.docker }}
-          SCRIPTS: ${{ steps.filter.outputs.scripts }}
         run: |
           set -Eeuo pipefail
           # Shared roots and tooling invalidate every consumer. Anything outside a
           # pull request runs everything.
           if [[ "${FORCE_FULL}" == "true" || "${SHARED}" == "true" ]]; then
-            app=true; docker=true; scripts=true
+            app=true; docker=true
           else
-            app="${APP}"; docker="${DOCKER}"; scripts="${SCRIPTS}"
+            app="${APP}"; docker="${DOCKER}"
           fi
           {
             echo "app=${app}"
             echo "docker=${docker}"
-            echo "scripts=${scripts}"
           } >>"${GITHUB_OUTPUT}"
-          echo "app=${app} docker=${docker} scripts=${scripts}" >>"${GITHUB_STEP_SUMMARY}"
+          echo "app=${app} docker=${docker}" >>"${GITHUB_STEP_SUMMARY}"
 
   always:
     name: Repository-wide checks
