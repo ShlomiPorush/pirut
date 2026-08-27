@@ -27,6 +27,24 @@ USAGE
 trial_project() { printf 'pirut-pr-%s\n' "$1"; }
 trial_worktree() { printf '%s/pr-%s\n' "${WORKTREE_PARENT}" "$1"; }
 trial_image() { printf '%s%s\n' "${TRIAL_IMAGE_PREFIX}" "$1"; }
+trial_port() { printf '%s\n' "$((4700 + $1 % 100))"; }
+
+# The trial database must live on a Linux-native path. The worktree sits wherever the
+# repository sits, which on this machine is a Windows drive where initdb cannot run.
+trial_data_dir() {
+  printf '%s/pirut/trials/pr-%s\n' "${XDG_DATA_HOME:-${HOME}/.local/share}" "$1"
+}
+
+trial_compose() {
+  local pr="$1"
+  shift
+  PIRUT_IMAGE="$(trial_image "${pr}")" \
+    PIRUT_DATA_DIR="$(trial_data_dir "${pr}")" \
+    PIRUT_WEB_PORT="$(trial_port "${pr}")" \
+    docker compose --project-directory "$(trial_worktree "${pr}")" \
+    -p "$(trial_project "${pr}")" \
+    -f "$(trial_worktree "${pr}")/config/docker/docker-compose-verify.yml" "$@"
+}
 
 require_pr_number() {
   [[ "${1:-}" =~ ^[0-9]+$ ]] || fail "A numeric pull request number is required."
@@ -62,27 +80,34 @@ op_start() {
   log "Creating disposable worktree at ${worktree}"
   git -C "${REPO_ROOT}" worktree add --detach "${worktree}" "refs/pirut-trials/pr-${pr}"
 
-  log "Building trial image $(trial_image "${pr}")"
-  docker build -t "$(trial_image "${pr}")" "${worktree}"
-
-  # The trial gets its own database directory. Durable development data is never reused,
-  # so a migration in the pull request cannot damage it.
-  local trial_data="${worktree}/.trial-data"
-  mkdir -p "${trial_data}/postgres"
-
-  log "Starting the trial stack"
-  PIRUT_IMAGE="$(trial_image "${pr}")" \
-    PIRUT_DATA_DIR="${trial_data}" \
-    PIRUT_WEB_PORT="$((4700 + pr % 100))" \
-    docker compose --project-directory "${worktree}" \
-    -p "$(trial_project "${pr}")" \
-    -f "${worktree}/config/docker/docker-compose-verify.yml" up -d
-
+  # The state file is written before anything that can fail below, so a failed start
+  # still leaves a trial that 'restore' knows how to clean up.
   mkdir -p "$(dirname "${STATE_FILE}")"
   printf '%s\n' "${pr}" >"${STATE_FILE}"
 
-  log "Trial for PR #${pr} is starting on http://127.0.0.1:$((4700 + pr % 100))/"
-  log "Run 'scripts/try-pr.sh status' to check readiness, then 'restore' when finished."
+  log "Building trial image $(trial_image "${pr}")"
+  docker build -t "$(trial_image "${pr}")" "${worktree}"
+
+  # The trial gets its own disposable database directory. Durable development data is
+  # never reused, so a migration in the pull request cannot damage it.
+  mkdir -p "$(trial_data_dir "${pr}")/postgres"
+
+  log "Starting the trial stack"
+  trial_compose "${pr}" up -d
+
+  local state=""
+  for _ in $(seq 1 40); do
+    state="$(trial_compose "${pr}" ps --format '{{.Service}} {{.Health}}' | awk '$1 == "web" {print $2}')"
+    [[ "${state}" == "healthy" || "${state}" == "unhealthy" ]] && break
+    sleep 3
+  done
+  if [[ "${state}" != "healthy" ]]; then
+    trial_compose "${pr}" logs --tail 20 >&2
+    fail "The trial stack did not become healthy (state: ${state:-absent}). Run 'scripts/try-pr.sh restore' to clean up."
+  fi
+
+  log "Trial for PR #${pr} is ready on http://127.0.0.1:$(trial_port "${pr}")/"
+  log "Run 'scripts/try-pr.sh restore' when finished."
 }
 
 op_status() {
@@ -95,11 +120,10 @@ op_status() {
   log "Active trial: PR #${pr}"
   printf '  worktree: %s\n' "$(trial_worktree "${pr}")"
   printf '  image:    %s\n' "$(trial_image "${pr}")"
+  printf '  data:     %s\n' "$(trial_data_dir "${pr}")"
+  printf '  address:  http://127.0.0.1:%s/\n' "$(trial_port "${pr}")"
 
-  docker compose --project-directory "$(trial_worktree "${pr}")" \
-    -p "$(trial_project "${pr}")" \
-    -f "$(trial_worktree "${pr}")/config/docker/docker-compose-verify.yml" \
-    ps --format 'table {{.Service}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null ||
+  trial_compose "${pr}" ps --format 'table {{.Service}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null ||
     printf '  the trial stack is not running\n'
 }
 
@@ -110,19 +134,25 @@ op_restore() {
     return 0
   fi
 
-  local worktree
+  local worktree trial_data
   worktree="$(trial_worktree "${pr}")"
+  trial_data="$(trial_data_dir "${pr}")"
 
   log "Stopping the trial stack"
-  PIRUT_IMAGE="$(trial_image "${pr}")" PIRUT_DATA_DIR="${worktree}/.trial-data" \
-    docker compose --project-directory "${worktree}" \
-    -p "$(trial_project "${pr}")" \
-    -f "${worktree}/config/docker/docker-compose-verify.yml" down --remove-orphans -v ||
-    warn "The trial stack was already stopped."
+  if [[ -d "${worktree}" ]]; then
+    trial_compose "${pr}" down --remove-orphans -v || warn "The trial stack was already stopped."
+  else
+    # The worktree may already be gone after a partial start; remove by project name.
+    docker compose -p "$(trial_project "${pr}")" down --remove-orphans -v 2>/dev/null ||
+      warn "The trial stack was already stopped."
+  fi
 
-  if [[ -d "${worktree}/.trial-data" ]]; then
+  if [[ -d "${trial_data}" ]]; then
     log "Removing disposable trial database"
-    docker run --rm -v "${worktree}/.trial-data:/target" alpine:3.22 sh -c 'rm -rf /target/*'
+    # The cluster files belong to the container's postgres user; deletion runs as root
+    # inside a throwaway container, mirroring local.sh nuke.
+    docker run --rm -v "${trial_data}:/target" alpine:3.22 sh -c 'rm -rf /target/postgres'
+    rmdir "${trial_data}" 2>/dev/null || true
   fi
 
   log "Removing worktree"
