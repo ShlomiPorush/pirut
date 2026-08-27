@@ -25,3 +25,15 @@ coverage/
 dist/
 build/
 *.tsbuildinfo
+
+# Real financial data. Statement exports must never enter this public repository.
+# `internal/` is the working directory for unsanitized issuer files.
+internal/
+*.xlsx
+*.xls
+*.csv
+*.pdf
+# Sanitized fixtures are the one exception and are added deliberately.
+!tests/fixtures/**/*.xlsx
+!tests/fixtures/**/*.xls
+!tests/fixtures/**/*.csv
