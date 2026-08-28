@@ -119,9 +119,11 @@ check_locale_completeness() {
 # these scripts run in, and escapes keep this file itself free of Hebrew.
 check_hebrew_guard() {
   local offenders exit_code
+  # --untracked matters: without it a new file passes locally and only fails in CI,
+  # after it has already been committed and pushed.
   offenders="$(
-    git -C "${REPO_ROOT}" grep -IlP '[\x{0590}-\x{05FF}]' -- \
-      ':!src/locales/he/' ':!tests/fixtures/he/'
+    git -C "${REPO_ROOT}" grep -IlP --untracked '[\x{0590}-\x{05FF}]' -- \
+      ':!src/locales/he/' ':!tests/fixtures/he/' ':!src/importers/isracard/format.ts'
   )" && exit_code=0 || exit_code=$?
 
   # git grep exits 0 with matches, 1 with none, and above 1 on error. An error must fail

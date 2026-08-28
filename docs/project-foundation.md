@@ -107,10 +107,10 @@ The repository is public-ready even if a future development environment or deplo
 
 - Repository documentation, code, identifiers, comments, commits, tests, Issues, pull requests, reviews, release notes, and GitHub discussion are English.
 - User-facing strings must live in localization resources from the first implementation.
-- Planned Hebrew exception paths are `src/locales/he/` and `tests/fixtures/he/` only.
+- Hebrew exception paths are `src/locales/he/`, `tests/fixtures/he/`, and per-issuer format-token modules such as `src/importers/isracard/format.ts`. The third was added when the first importer was built: a statement written in Hebrew cannot be parsed without matching its Hebrew column headers and markers literally, and those tokens are part of the file format rather than text anyone reads.
 - The English locale is planned at `src/locales/en/`.
 - Sanitized Hebrew issuer fixtures may contain only the minimum synthetic data required for parser verification. They must not be copied from a real statement without irreversible sanitization and review.
-- CI must scan tracked text for Hebrew and exclude only `src/locales/he/**` and `tests/fixtures/he/**`. Broad file-type or directory exclusions are prohibited.
+- The language guard scans tracked and untracked text for Hebrew and excludes only the exact paths above. Broad file-type or directory exclusions are prohibited. Untracked files are included deliberately: without that, a new file passes locally and fails only after it has been committed and pushed.
 - Tests outside the fixture path must load Hebrew samples from approved fixture files instead of embedding duplicate Hebrew literals.
 
 ## Planned architecture

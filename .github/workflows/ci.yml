@@ -107,6 +107,8 @@ jobs:
       - name: Repository-wide checks
         # verify.sh owns every check definition. CI selects an area rather than
         # restating the commands, so local runs and CI can never drift apart.
+        # verify.sh owns every check definition. CI selects an area rather than
+        # restating the commands, so local runs and CI can never drift apart.
         run: ./scripts/verify.sh --only repo
 
   app:
