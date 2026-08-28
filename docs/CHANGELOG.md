@@ -41,6 +41,8 @@ Versioning scheme selection is deferred until the first release is prepared.
 
 ### Fixed
 
+- `scripts/local.sh -b` demanded Node and pnpm on the host to run `pnpm install` before building the image, and failed in any shell where Node was not on the PATH. The Dockerfile already installs from the lockfile inside the build, so the host install was redundant. Building now needs Docker only.
+
 - The language guard scanned only tracked files, so a new file containing Hebrew passed locally and would have failed only after being committed and pushed. It now scans untracked files too.
 
 - The dependency audit only inspected production dependencies, so a development-only advisory never reached it. Production is now audited at moderate and above, and development dependencies at high and above.

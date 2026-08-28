@@ -60,13 +60,11 @@ op_init() {
   log "Durable data directory ready at ${data_dir}"
 }
 
+# Building the image needs Docker and nothing else: the Dockerfile installs dependencies
+# from the lockfile inside the build, so the host does not need Node or pnpm at all.
 op_build() {
   require_dev_compose
   require_docker
-  require_node_toolchain
-
-  log "Installing dependencies from the lockfile"
-  (cd "${REPO_ROOT}" && pnpm install --frozen-lockfile)
 
   log "Building ${DEV_IMAGE}"
   build_image "${DEV_IMAGE}"

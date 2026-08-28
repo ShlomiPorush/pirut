@@ -271,7 +271,7 @@ All four canonical scripts must use `#!/usr/bin/env bash`, LF line endings, exec
 Planned operations:
 
 - `init`: create `config/docker/.env` and `config/docker/docker-compose-dev.yml` from tracked safe templates only when absent.
-- `build`: install from the lockfile and build explicit development images before runtime changes.
+- `build`: build the explicit development image. The Dockerfile installs from the lockfile inside the build, so the host needs Docker only, not Node or pnpm.
 - `up` (default command): start in the foreground; `-b` builds first, and the image is built automatically only when absent. `-d` starts detached and verifies readiness, effective UID, and running image identity. Flags combine as `-bd`, matching the owner's other repositories. `up-detached` remains as an alias.
 - `down`: stop services and remove orphans while preserving durable directories.
 - `status`: show service health, image identities, bind mounts, and migration compatibility without exposing secrets.
