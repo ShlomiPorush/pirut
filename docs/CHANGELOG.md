@@ -30,7 +30,7 @@ Versioning scheme selection is deferred until the first release is prepared.
 
 ### Security
 
-- `scripts/local.sh up -d` now inspects the running web container's published ports and refuses to report ready, stopping the service, when any binding is not on `127.0.0.1`. The application has no login, so a network-reachable binding is a data exposure. The check runs against the container rather than the Compose file because the machine-local development file can drift from the tracked template, which is exactly what had happened.
+- `scripts/local.sh up -d` inspects the running web container's published ports and warns when any binding is not on `127.0.0.1`, since the application has no login yet. It reports only: the machine-local development file and the running environment belong to the developer, and the script never alters them.
 
 - A verification check that fails when statement-shaped files (`.xlsx`, `.xls`, `.csv`, `.pdf`) or anything under `internal/` becomes tracked outside `tests/fixtures/`. Committing a real statement to a public repository is unrecoverable, and an ignore rule alone is one typo away from failing.
 

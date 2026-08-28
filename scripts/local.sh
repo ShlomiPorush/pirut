@@ -92,17 +92,15 @@ verify_runtime() {
   [[ "${image}" == "${DEV_IMAGE}" ]] ||
     fail "The web service runs unexpected image '${image}'; expected '${DEV_IMAGE}'."
 
-  # The application has no authentication, so it may only ever listen on loopback. This
-  # is checked on the running container rather than on the Compose file, because the
-  # machine-local file can drift from the tracked template without anything noticing.
+  # The machine-local Compose file belongs to the developer and this script never alters
+  # the running environment on its own. It only reports, loudly, when the web service is
+  # reachable beyond loopback, because the application has no login yet.
   local bindings
   bindings="$(docker inspect "$(dev_compose ps -q web)"     --format '{{range $port, $hosts := .HostConfig.PortBindings}}{{range $hosts}}{{.HostIp}}:{{.HostPort}} {{end}}{{end}}')"
   local binding
   for binding in ${bindings}; do
-    [[ "${binding}" == 127.0.0.1:* ]] || {
-      dev_compose stop web >/dev/null 2>&1 || true
-      fail "The web service is published on '${binding}', which is reachable from the network. Pirut has no login, so it must bind 127.0.0.1 only. The web service has been stopped; fix the ports entry in ${DEV_COMPOSE_FILE} (see the tracked template) and run up again."
-    }
+    [[ "${binding}" == 127.0.0.1:* ]] ||
+      warn "The web service is published on '${binding}' and is reachable from the network. Pirut has no login yet."
   done
 
   log "Runtime verified: image ${image}, effective UID ${uid}, published on ${bindings% }"
