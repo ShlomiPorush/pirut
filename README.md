@@ -21,7 +21,7 @@ All workflow scripts are Bash and run inside WSL.
 
 ```bash
 scripts/local.sh init          # create config/docker/.env and docker-compose-dev.yml
-scripts/local.sh up-detached   # build, start, and verify readiness
+scripts/local.sh up -bd        # build, start detached, and verify readiness
 ```
 
 The application is then served on `http://127.0.0.1:4610/`. It binds to loopback only.
