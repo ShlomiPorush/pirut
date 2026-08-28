@@ -15,9 +15,9 @@
 *.sql text eol=lf
 
 Dockerfile text eol=lf
-.dockerignore text eol=lf
+*.dockerignore text eol=lf
 .env.example text eol=lf
-config/docker/env.example text eol=lf
+.env.development.example text eol=lf
 
 *.png binary
 *.jpg binary

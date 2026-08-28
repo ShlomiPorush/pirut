@@ -7,7 +7,8 @@ with weaker access than the database itself.
 ## Where backups live
 
 Backups are written to `${PIRUT_DATA_DIR}/backups/` on the Docker host, beside the PostgreSQL data
-directory. `PIRUT_DATA_DIR` is set in the machine-local `.env` and must be a Linux-native path.
+directory. `PIRUT_DATA_DIR` is set in the machine-local `config/docker/.env` and must be a
+Linux-native path.
 The directory is ignored by Git.
 
 Files are named `<database>-<UTC timestamp>.dump` and use PostgreSQL's custom format, which is

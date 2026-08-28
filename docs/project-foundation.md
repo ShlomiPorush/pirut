@@ -174,14 +174,14 @@ No Docker artifact currently exists. Everything in this section is a requirement
 
 ### Compose contract
 
-- Root `docker-compose.yml` is tracked and describes the production deployment using published images.
-- Root `docker-compose-dev.yml` is machine-local, ignored, and invoked only through `scripts/local.sh`.
+- `config/docker/docker-compose.yml` is tracked and describes the production deployment using published images.
+- `config/docker/docker-compose-dev.yml` is machine-local, ignored, and invoked only through `scripts/local.sh`.
 - A tracked template at `config/docker/docker-compose-dev.example.yml` lets `scripts/local.sh init` create the local development file without committing it.
 - Neither Compose file may contain `build:`. Workflow scripts build images explicitly and stop on failure.
 - The application image has an explicit development tag such as `pirut-web:dev`.
 - The production application image is planned as `ghcr.io/shlomiporush/pirut:<immutable-version>`.
 - Compose interpolation is limited to values Compose must resolve, such as the application image tag and durable host-data path.
-- Container runtime variables are supplied through a root `.env` file referenced by `env_file`. The tracked `.env.example` contains only safe placeholders.
+- Container runtime variables are supplied through `config/docker/.env`, referenced by `env_file` and resolved against the Compose project directory. The tracked `config/docker/.env.example` contains only safe placeholders.
 - PostgreSQL has no published host port in the ordinary runtime.
 - The web service publishes only the documented application port and binds it to `127.0.0.1` by default.
 
@@ -194,32 +194,38 @@ No Docker artifact currently exists. Everything in this section is a requirement
 
 Ordinary `down`, restart, upgrade, and PR trial operations preserve PostgreSQL data. Only an explicit `nuke` flow may delete development data, after resolving and verifying that the absolute target remains within the exact project-owned development data directory and after interactive confirmation.
 
-## Planned repository root
+## Repository root
 
-Directories are intentionally excluded from this inventory. Scripts, extended documentation, configuration templates, migrations, fixtures, and workflows belong in purpose-specific directories.
+The root holds only files that tooling must discover there. Everything else lives in a purpose-specific directory. This was tightened on 2026-08-28 at the owner's request: the preparation plan had allowed Docker, changelog, security, and tool-configuration files at the root, and the owner decided the root must stay minimal.
 
-| Root file                | Git tracking policy       | Why this exact root location is required                                                | Status      |
-| ------------------------ | ------------------------- | --------------------------------------------------------------------------------------- | ----------- |
-| `README.md`              | Tracked                   | Standard repository entry point and current-truth summary.                              | PREPARED    |
-| `AGENTS.md`              | Tracked                   | Repository instruction discovery for contributors and coding agents.                    | PREPARED    |
-| `LICENSE`                | Tracked                   | Standard license discovery and GitHub license detection.                                | PREPARED    |
-| `.gitignore`             | Tracked                   | Git discovery requires repository-wide ignore policy at the root.                       | PREPARED    |
-| `.gitattributes`         | Tracked                   | Enforces LF for planned Bash scripts and stable text handling across Windows and WSL.   | PREPARED    |
-| `CHANGELOG.md`           | Tracked                   | Canonical `Unreleased` record and release history.                                      | IMPLEMENTED |
-| `package.json`           | Tracked                   | Root Node package and canonical workflow metadata if the provisional stack is approved. | IMPLEMENTED |
-| `pnpm-lock.yaml`         | Tracked                   | Standard reproducible lockfile for the provisional package manager.                     | IMPLEMENTED |
-| `.node-version`          | Tracked                   | Cross-tool discovery of the selected Node.js LTS version.                               | IMPLEMENTED |
-| `tsconfig.json`          | Tracked                   | IDE and TypeScript ecosystem discovery for the application root.                        | IMPLEMENTED |
-| `.dockerignore`          | Tracked                   | Docker build-context discovery requires this exact location.                            | IMPLEMENTED |
-| `Dockerfile`             | Tracked                   | Standard Docker build contract for the single application image.                        | IMPLEMENTED |
-| `docker-compose.yml`     | Tracked                   | Approved production Compose discovery path.                                             | IMPLEMENTED |
-| `docker-compose-dev.yml` | Ignored and machine-local | Approved development Compose discovery path used only by `scripts/local.sh`.            | IMPLEMENTED |
-| `.env.example`           | Tracked                   | Safe runtime and Compose environment contract discoverable beside Compose.              | IMPLEMENTED |
-| `.env`                   | Ignored and machine-local | Contains real local configuration and secrets consumed by Compose `env_file`.           | IMPLEMENTED |
-| `pnpm-workspace.yaml`    | Tracked                   | pnpm 11 reads build-approval policy only from this exact root file.                     | IMPLEMENTED |
-| `eslint.config.mjs`      | Tracked                   | ESLint flat-config discovery requires this exact root location.                         | IMPLEMENTED |
-| `vitest.config.ts`       | Tracked                   | Vitest configuration discovery for the repository-wide test suite.                      | IMPLEMENTED |
-| `.prettierignore`        | Tracked                   | Prettier discovery requires repository-wide ignore policy at the root.                  | IMPLEMENTED |
+| Root file             | Git tracking policy | Why this exact root location is required                                          |
+| --------------------- | ------------------- | --------------------------------------------------------------------------------- |
+| `README.md`           | Tracked             | Standard repository entry point and current-truth summary.                        |
+| `AGENTS.md`           | Tracked             | Repository instruction discovery for contributors and coding agents.              |
+| `LICENSE`             | Tracked             | Standard license discovery and GitHub license detection.                          |
+| `.gitignore`          | Tracked             | Git discovery requires repository-wide ignore policy at the root.                 |
+| `.gitattributes`      | Tracked             | Enforces LF for Bash scripts and stable text handling across Windows and WSL.     |
+| `package.json`        | Tracked             | Root Node package, canonical scripts, and the `engines.node` version contract.    |
+| `pnpm-lock.yaml`      | Tracked             | Reproducible lockfile; pnpm requires it beside `package.json`.                    |
+| `pnpm-workspace.yaml` | Tracked             | pnpm 11 reads build-approval policy and overrides only from this exact root file. |
+| `tsconfig.json`       | Tracked             | Editors and the TypeScript ecosystem discover the nearest `tsconfig.json` upward. |
+
+Files that were at the root and now live elsewhere, with the mechanism that lets them move:
+
+| File                               | Now at                                  | How tooling finds it                                                                                                                                                    |
+| ---------------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Dockerfile`                       | `config/docker/Dockerfile`              | `docker build -f`, wrapped by `build_image` in `scripts/lib/common.sh`.                                                                                                 |
+| `.dockerignore`                    | `config/docker/Dockerfile.dockerignore` | BuildKit reads `<Dockerfile>.dockerignore` beside the Dockerfile.                                                                                                       |
+| `docker-compose.yml`               | `config/docker/docker-compose.yml`      | Compose is invoked with `--project-directory config/docker`.                                                                                                            |
+| `docker-compose-dev.yml` (ignored) | `config/docker/docker-compose-dev.yml`  | Generated there by `scripts/local.sh init`.                                                                                                                             |
+| `.env.example`                     | `config/docker/.env.example`            | Production environment contract beside the Compose files.                                                                                                               |
+| `.env` (ignored)                   | `config/docker/.env`                    | Compose resolves `env_file: .env` and `${VAR}` against its project directory.                                                                                           |
+| `eslint.config.mjs`                | `config/eslint.config.mjs`              | `eslint --config`; ignore patterns are written relative to the root.                                                                                                    |
+| `vitest.config.ts`                 | `config/vitest.config.ts`               | `vitest --config`; the config states `root` explicitly.                                                                                                                 |
+| `.prettierignore`                  | Removed                                 | Prettier anchors an ignore file to its own directory, so one under `config/` cannot exclude root paths. Exclusions are negated globs in the `format` scripts instead.   |
+| `.node-version`                    | Removed                                 | `engines.node` in `package.json` is the single version contract; CI reads it with `node-version-file: package.json`, and verification checks the Dockerfile against it. |
+| `CHANGELOG.md`                     | `docs/CHANGELOG.md`                     | `scripts/release.sh` reads and closes it there.                                                                                                                         |
+| `SECURITY.md`                      | `.github/SECURITY.md`                   | GitHub recognises the security policy in `.github/`.                                                                                                                    |
 
 No report, scratch file, generated artifact, editor configuration, or one-off helper belongs at the repository root.
 
@@ -264,7 +270,7 @@ All four canonical scripts must use `#!/usr/bin/env bash`, LF line endings, exec
 
 Planned operations:
 
-- `init`: create root `.env` and `docker-compose-dev.yml` from tracked safe templates only when absent.
+- `init`: create `config/docker/.env` and `config/docker/docker-compose-dev.yml` from tracked safe templates only when absent.
 - `build`: install from the lockfile and build explicit development images before runtime changes.
 - `up`: build, start in the foreground, and verify readiness.
 - `up-detached`: build, start detached, and verify readiness, effective UID, and running image identity.

@@ -91,12 +91,12 @@ detect_changes() {
   fi
 
   # Shared roots invalidate every area. Anything not proven docs-only runs everything.
-  if grep -qE '^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|tsconfig\.json|vitest\.config\.ts|eslint\.config\.mjs|\.node-version|Dockerfile|\.dockerignore|docker-compose\.yml|\.env\.example|config/|scripts/|src/|tests/|db/|\.github/)' <<<"${changed}"; then
+  if grep -qE '^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|tsconfig\.json|\.gitattributes|config/|scripts/|src/|tests/|db/|\.github/)' <<<"${changed}"; then
     log "Change detector: shared or application paths touched; running the full suite."
     return
   fi
 
-  if ! grep -qvE '^(docs/|README\.md|AGENTS\.md|CHANGELOG\.md|LICENSE)' <<<"${changed}"; then
+  if ! grep -qvE '^(docs/|README\.md|AGENTS\.md|LICENSE)' <<<"${changed}"; then
     log "Change detector: documentation-only change; skipping application and Docker checks."
     RUN_APP=0
     RUN_DOCKER=0
@@ -109,7 +109,7 @@ detect_changes() {
 # --- individual checks ------------------------------------------------------
 
 check_locale_completeness() {
-  (cd "${REPO_ROOT}" && pnpm exec vitest run tests/locales)
+  (cd "${REPO_ROOT}" && pnpm exec vitest run --config config/vitest.config.ts tests/locales)
 }
 
 # The repository is public-ready and English-only outside two exact paths.
@@ -171,7 +171,7 @@ check_compose_contract() {
   # never touch a real .env that already exists.
   local temporary_env=0
   if [[ ! -f "${ENV_FILE}" ]]; then
-    cp "${REPO_ROOT}/.env.example" "${ENV_FILE}"
+    cp "${PROD_ENV_TEMPLATE}" "${ENV_FILE}"
     temporary_env=1
   fi
   restore_env() { [[ "${temporary_env}" == "1" ]] && rm -f "${ENV_FILE}"; }
@@ -182,12 +182,12 @@ check_compose_contract() {
     fi
 
     # Render with the tracked example values so interpolation is exercised too.
-    # The project directory is the repository root, matching how the scripts invoke
-    # Compose; a service-level env_file resolves against it.
+    # The project directory is config/docker, matching how the scripts invoke Compose;
+    # a service-level env_file resolves against it.
     rendered="$(mktemp)"
     if ! PIRUT_IMAGE="${DEV_IMAGE}" PIRUT_DATA_DIR=/tmp/pirut-contract-check \
-      docker compose --project-directory "${REPO_ROOT}" -f "${file}" \
-      --env-file "${REPO_ROOT}/.env.example" \
+      docker compose --project-directory "${DOCKER_DIR}" -f "${file}" \
+      --env-file "${PROD_ENV_TEMPLATE}" \
       config --format json >"${rendered}"; then
       printf 'Compose file failed to parse: %s\n' "${file}" >&2
       rm -f "${rendered}"
@@ -243,41 +243,39 @@ NODE
 }
 
 check_dockerfile_contract() {
-  grep -qE '^USER[[:space:]]+10001:10001' "${REPO_ROOT}/Dockerfile" ||
+  grep -qE '^USER[[:space:]]+10001:10001' "${DOCKERFILE}" ||
     { printf 'Dockerfile must switch to the dedicated non-root user.\n' >&2 && return 1; }
-  grep -qE '^HEALTHCHECK' "${REPO_ROOT}/Dockerfile" ||
+  grep -qE '^HEALTHCHECK' "${DOCKERFILE}" ||
     { printf 'Dockerfile must define a health check.\n' >&2 && return 1; }
-  grep -qE '^FROM node:[0-9]+\.[0-9]+\.[0-9]+-' "${REPO_ROOT}/Dockerfile" ||
+  grep -qE '^FROM node:[0-9]+\.[0-9]+\.[0-9]+-' "${DOCKERFILE}" ||
     { printf 'Dockerfile base images must be pinned to an exact version.\n' >&2 && return 1; }
 
-  # The image, the toolchain contract, and the engines range describe one decision.
-  # When they drift, the failure surfaces as an unrelated build error, so check it here.
-  local pinned versions unique
-  pinned="$(tr -d '[:space:]' <"${REPO_ROOT}/.node-version")"
-  versions="$(sed -n 's/^FROM node:\([0-9][^-]*\)-.*/\1/p' "${REPO_ROOT}/Dockerfile" | sort -u)"
+  # The image and the engines range in package.json describe one decision. When they
+  # drift, the failure surfaces as an unrelated build error, so check it here.
+  local versions unique major
+  versions="$(sed -n 's/^FROM node:\([0-9][^-]*\)-.*/\1/p' "${DOCKERFILE}" | sort -u)"
   unique="$(wc -l <<<"${versions}")"
-  if [[ "${unique}" -ne 1 || "${versions}" != "${pinned}" ]]; then
-    printf 'Dockerfile Node version must match .node-version (%s). Found: %s\n' \
-      "${pinned}" "$(tr '\n' ' ' <<<"${versions}")" >&2
+  if [[ "${unique}" -ne 1 ]]; then
+    printf 'Dockerfile stages must share one Node version. Found: %s\n' \
+      "$(tr '\n' ' ' <<<"${versions}")" >&2
     return 1
   fi
-
-  local major="${pinned%%.*}"
+  major="${versions%%.*}"
   grep -q "\"node\": \">=${major} <$((major + 1))\"" "${REPO_ROOT}/package.json" ||
     {
-      printf 'package.json engines.node must be ">=%s <%s" to match .node-version.\n' \
-        "${major}" "$((major + 1))" >&2
+      printf 'package.json engines.node must be ">=%s <%s" to match the Dockerfile Node %s.\n' \
+        "${major}" "$((major + 1))" "${versions}" >&2
       return 1
     }
 }
 
 check_env_example_is_safe() {
   # A placeholder secret is expected; a real-looking one is not.
-  if grep -qiE '^(POSTGRES_PASSWORD)=.*(prod|live)' "${REPO_ROOT}/.env.example"; then
+  if grep -qiE '^(POSTGRES_PASSWORD)=.*(prod|live)' "${PROD_ENV_TEMPLATE}"; then
     printf '.env.example must contain placeholders only.\n' >&2
     return 1
   fi
-  grep -q '^PIRUT_DATABASE_URL=' "${REPO_ROOT}/.env.example"
+  grep -q '^PIRUT_DATABASE_URL=' "${PROD_ENV_TEMPLATE}"
 }
 
 check_scripts_shell() {
@@ -321,7 +319,7 @@ check_docker_image() {
   # image left by an earlier run and the check reported a pass.
   local build_log
   build_log="$(mktemp)"
-  if ! docker build -t "${DEV_IMAGE}" "${REPO_ROOT}" >"${build_log}" 2>&1; then
+  if ! build_image "${DEV_IMAGE}" >"${build_log}" 2>&1; then
     printf 'The image failed to build:\n' >&2
     tail -n 25 "${build_log}" >&2
     rm -f "${build_log}"
@@ -422,8 +420,8 @@ check_lockfile_is_current() {
 INTEGRATION_PROJECT="pirut-verify-$$"
 
 integration_compose() {
-  docker compose --project-directory "${REPO_ROOT}" -p "${INTEGRATION_PROJECT}" \
-    -f "${REPO_ROOT}/config/docker/docker-compose-verify.yml" "$@"
+  docker compose --project-directory "${DOCKER_DIR}" -p "${INTEGRATION_PROJECT}" \
+    -f "${DOCKER_DIR}/docker-compose-verify.yml" "$@"
 }
 
 cleanup_integration() {

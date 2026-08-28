@@ -80,11 +80,11 @@ check_source_state() {
   git -C "${REPO_ROOT}" rev-parse --verify --quiet "refs/tags/${TAG}" >/dev/null &&
     fail "Tag ${TAG} already exists. Published versions are immutable."
 
-  grep -q '^## \[Unreleased\]' "${REPO_ROOT}/CHANGELOG.md" ||
-    fail "CHANGELOG.md has no Unreleased section to close."
+  grep -q '^## \[Unreleased\]' "${REPO_ROOT}/docs/CHANGELOG.md" ||
+    fail "docs/CHANGELOG.md has no Unreleased section to close."
 
   # An Unreleased section with no entries means nothing to release.
-  awk '/^## \[Unreleased\]/{flag=1; next} /^## /{flag=0} flag' "${REPO_ROOT}/CHANGELOG.md" |
+  awk '/^## \[Unreleased\]/{flag=1; next} /^## /{flag=0} flag' "${REPO_ROOT}/docs/CHANGELOG.md" |
     grep -q '^- ' || fail "The Unreleased section has no entries."
 }
 
@@ -103,7 +103,7 @@ preview() {
   printf '  commit:  %s\n' "$(git -C "${REPO_ROOT}" rev-parse --short HEAD)"
   echo
   log "Unreleased changelog entries"
-  awk '/^## \[Unreleased\]/{flag=1; next} /^## /{flag=0} flag' "${REPO_ROOT}/CHANGELOG.md" |
+  awk '/^## \[Unreleased\]/{flag=1; next} /^## /{flag=0} flag' "${REPO_ROOT}/docs/CHANGELOG.md" |
     sed 's/^/  /'
   echo
   log "Re-run with --execute to perform the release."
@@ -128,7 +128,7 @@ const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 manifest.version = version;
 fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 
-const changelogPath = path.join(root, "CHANGELOG.md");
+const changelogPath = path.join(root, "docs/CHANGELOG.md");
 const changelog = fs.readFileSync(changelogPath, "utf8");
 const stamp = new Date().toISOString().slice(0, 10);
 fs.writeFileSync(
@@ -141,11 +141,11 @@ fs.writeFileSync(
 NODE
 
   log "Building the release image"
-  docker build -t "${IMAGE_REF}" "${REPO_ROOT}"
+  build_image "${IMAGE_REF}"
 
   log "Committing the release"
   # Explicit paths only: a blanket 'git add .' could sweep in unrelated work.
-  git -C "${REPO_ROOT}" add package.json CHANGELOG.md
+  git -C "${REPO_ROOT}" add package.json docs/CHANGELOG.md
   git -C "${REPO_ROOT}" commit -m "release: ${VERSION}"
   git -C "${REPO_ROOT}" tag -a "${TAG}" -m "Pirut ${VERSION}"
 

@@ -4,11 +4,18 @@
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 readonly REPO_ROOT
 
-readonly DEV_COMPOSE_FILE="${REPO_ROOT}/docker-compose-dev.yml"
-readonly PROD_COMPOSE_FILE="${REPO_ROOT}/docker-compose.yml"
-readonly DEV_COMPOSE_TEMPLATE="${REPO_ROOT}/config/docker/docker-compose-dev.example.yml"
-readonly DEV_ENV_TEMPLATE="${REPO_ROOT}/config/docker/env.example"
-readonly ENV_FILE="${REPO_ROOT}/.env"
+# Everything Docker-related lives under config/docker, including the machine-local
+# .env and docker-compose-dev.yml that scripts/local.sh init generates there. Compose is
+# always invoked with that directory as its project directory, so `env_file: .env` and
+# ${VAR} interpolation resolve against the .env beside the Compose files.
+readonly DOCKER_DIR="${REPO_ROOT}/config/docker"
+readonly DOCKERFILE="${DOCKER_DIR}/Dockerfile"
+readonly DEV_COMPOSE_FILE="${DOCKER_DIR}/docker-compose-dev.yml"
+readonly PROD_COMPOSE_FILE="${DOCKER_DIR}/docker-compose.yml"
+readonly DEV_COMPOSE_TEMPLATE="${DOCKER_DIR}/docker-compose-dev.example.yml"
+readonly DEV_ENV_TEMPLATE="${DOCKER_DIR}/.env.development.example"
+readonly PROD_ENV_TEMPLATE="${DOCKER_DIR}/.env.example"
+readonly ENV_FILE="${DOCKER_DIR}/.env"
 readonly DEV_IMAGE="pirut-web:dev"
 
 log() { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
@@ -28,7 +35,7 @@ require_docker() {
 }
 
 require_node_toolchain() {
-  require_command node "Install the Node.js version pinned in .node-version."
+  require_command node "Install the Node.js version required by engines.node in package.json."
   require_command pnpm "Enable pnpm with: corepack enable pnpm"
 }
 
@@ -47,7 +54,13 @@ require_dev_compose() {
 }
 
 dev_compose() {
-  docker compose --project-directory "${REPO_ROOT}" -f "${DEV_COMPOSE_FILE}" "$@"
+  docker compose --project-directory "${DOCKER_DIR}" -f "${DEV_COMPOSE_FILE}" "$@"
+}
+
+# Builds the application image with the repository root as the build context.
+build_image() {
+  local tag="$1" context="${2:-${REPO_ROOT}}"
+  docker build -f "${context}/config/docker/Dockerfile" -t "${tag}" "${context}"
 }
 
 # Resolves the durable development data directory declared in .env.

@@ -86,7 +86,7 @@ op_start() {
   printf '%s\n' "${pr}" >"${STATE_FILE}"
 
   log "Building trial image $(trial_image "${pr}")"
-  docker build -t "$(trial_image "${pr}")" "${worktree}"
+  build_image "$(trial_image "${pr}")" "${worktree}"
 
   # The trial gets its own disposable database directory. Durable development data is
   # never reused, so a migration in the pull request cannot damage it.
