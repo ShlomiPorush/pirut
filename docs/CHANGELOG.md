@@ -36,6 +36,7 @@ Versioning scheme selection is deferred until the first release is prepared.
 
 ### Changed
 
+- `scripts/local.sh` now follows the same interface as the owner's other repositories: `up` is the default command, `-b` builds before starting, `-d` runs detached and verifies readiness, the two combine as `-bd`, and `nuke --confirm <exact path>` allows non-interactive use. Without `-b`, `up` reuses the existing image and builds only when it is absent. `up-detached` remains as an alias.
 - The repository root now holds only the files tooling must find there. Docker files moved to `config/docker/` (including the machine-local `.env` and `docker-compose-dev.yml`), the ESLint and Vitest configs to `config/`, the changelog to `docs/`, and the security policy to `.github/`. `.prettierignore` and `.node-version` were removed: Prettier exclusions are negated globs in the `format` scripts, and `engines.node` in `package.json` is the single Node version contract.
 
 ### Fixed

@@ -6,21 +6,35 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/local.sh <operation>
+Usage: scripts/local.sh [command] [flags]
 
-Operations:
-  init          Create the machine-local config/docker/.env and docker-compose-dev.yml from templates.
-  build         Install from the lockfile and build the development image.
-  up            Build, then start in the foreground.
-  up-detached   Build, start detached, and verify readiness, runtime identity, and image identity.
-  down          Stop services and remove orphans. Durable data is preserved.
-  status        Show service health, image identities, mounts, and port bindings.
-  backup        Write a consistent pg_dump into the durable backups directory.
-  restore <f>   Restore a backup into a clean database after interactive confirmation.
-  nuke          Delete the validated development data directory after interactive confirmation.
+Commands:
+  up              Start the development environment (default)
+  build           Build the development image without starting it
+  down            Stop and remove containers while preserving data
+  status          Show service health, image identities, mounts, and migrations
+  init            Create config/docker/.env and docker-compose-dev.yml from templates
+  backup          Write a consistent pg_dump into the durable backups directory
+  restore <file>  Restore a backup into a clean database after confirmation
+  nuke            Stop containers and delete the development data directory
 
-A backup contains real financial data. It follows the same access and retention rules as the
-live database and must never be committed or shared.
+Flags for up:
+  -b              Build the development image before starting
+  -d              Run in detached mode, then verify readiness and runtime identity
+
+Nuke automation:
+  --confirm <data-dir>   Skip the interactive prompt by naming the exact directory
+
+Examples:
+  scripts/local.sh
+  scripts/local.sh -bd
+  scripts/local.sh up -b -d
+  scripts/local.sh down
+  scripts/local.sh nuke
+
+Without -b, up starts the existing pirut-web:dev image and builds it only if it is
+absent. A backup contains real financial data: it follows the same access and retention
+rules as the live database and must never be committed or shared.
 USAGE
 }
 
@@ -83,16 +97,28 @@ verify_runtime() {
   log "Runtime verified: image ${image}, effective UID ${uid}"
 }
 
-op_up() {
-  op_build
-  require_dev_compose
-  log "Starting in the foreground. Press Ctrl+C to stop."
-  dev_compose up
+# Builds only when asked with -b, or when the image does not exist yet. Compose never
+# builds; the image it runs is produced only here.
+ensure_image() {
+  if [[ "${BUILD_REQUIRED}" == "true" ]]; then
+    op_build
+  elif ! docker image inspect "${DEV_IMAGE}" >/dev/null 2>&1; then
+    log "${DEV_IMAGE} does not exist yet; building it first"
+    op_build
+  fi
 }
 
-op_up_detached() {
-  op_build
+op_up() {
   require_dev_compose
+  require_docker
+  ensure_image
+
+  if [[ "${DETACHED}" != "true" ]]; then
+    log "Starting in the foreground. Press Ctrl+C to stop."
+    dev_compose up
+    return
+  fi
+
   dev_compose up -d
   wait_for_health db
   wait_for_health web
@@ -134,7 +160,7 @@ require_db_running() {
   local health
   health="$(dev_compose ps --format '{{.Service}} {{.Health}}' | awk '$1 == "db" {print $2}')"
   [[ "${health}" == "healthy" ]] ||
-    fail "The db service is not healthy. Run 'scripts/local.sh up-detached' first."
+    fail "The db service is not healthy. Run 'scripts/local.sh up -d' first."
 }
 
 op_backup() {
@@ -215,10 +241,14 @@ op_nuke() {
   [[ "${data_dir}" == "$(default_data_dir)" || "${data_dir}" == "${expected_parent}"/* ]] ||
     fail "Refusing to delete ${data_dir}: it is outside the project-owned data location $(default_data_dir)."
 
-  printf 'This permanently deletes all local Pirut database data at:\n  %s\n' "${data_dir}"
-  printf "Type the exact path to confirm: "
   local answer
-  read -r answer
+  if [[ -n "${CONFIRMATION}" ]]; then
+    answer="${CONFIRMATION}"
+  else
+    printf 'This permanently deletes all local Pirut database data at:\n  %s\n' "${data_dir}"
+    printf "Type the exact path to confirm: "
+    read -r answer
+  fi
   [[ "${answer}" == "${data_dir}" ]] || fail "Confirmation did not match. Nothing was deleted."
 
   dev_compose down --remove-orphans
@@ -231,25 +261,84 @@ op_nuke() {
   log "Deleted and recreated ${data_dir}"
 }
 
+COMMAND="up"
+BUILD_REQUIRED="false"
+DETACHED="false"
+CONFIRMATION=""
+RESTORE_SOURCE=""
+
+parse_arguments() {
+  # The first argument is the command unless it is a flag, in which case `up` is implied,
+  # so `scripts/local.sh -bd` works like `scripts/local.sh up -b -d`.
+  if (($# > 0)) && [[ "$1" != -* ]]; then
+    COMMAND="$1"
+    shift
+  fi
+
+  case "${COMMAND}" in
+    up | build | down | status | init | backup | nuke) ;;
+    up-detached)
+      COMMAND="up"
+      DETACHED="true"
+      ;;
+    restore)
+      RESTORE_SOURCE="${1:-}"
+      (($# > 0)) && shift
+      ;;
+    help)
+      usage
+      exit 0
+      ;;
+    *)
+      usage >&2
+      fail "Unknown command: ${COMMAND}"
+      ;;
+  esac
+
+  while (($# > 0)); do
+    case "$1" in
+      -b) BUILD_REQUIRED="true" ;;
+      -d) DETACHED="true" ;;
+      -bd | -db)
+        BUILD_REQUIRED="true"
+        DETACHED="true"
+        ;;
+      --confirm)
+        shift
+        (($# > 0)) || fail "--confirm requires the exact data directory."
+        CONFIRMATION="$1"
+        ;;
+      -h | --help)
+        usage
+        exit 0
+        ;;
+      *)
+        usage >&2
+        fail "Unknown flag: $1"
+        ;;
+    esac
+    shift
+  done
+
+  if [[ "${COMMAND}" != "up" && ("${BUILD_REQUIRED}" == "true" || "${DETACHED}" == "true") ]]; then
+    fail "-b and -d apply only to up."
+  fi
+  if [[ "${COMMAND}" != "nuke" && -n "${CONFIRMATION}" ]]; then
+    fail "--confirm applies only to nuke."
+  fi
+}
+
 main() {
-  case "${1:-}" in
+  parse_arguments "$@"
+  case "${COMMAND}" in
     init) op_init ;;
     build) op_build ;;
     up) op_up ;;
-    up-detached) op_up_detached ;;
     down) op_down ;;
     status) op_status ;;
     backup) op_backup ;;
-    restore)
-      shift
-      op_restore "${1:-}"
-      ;;
+    restore) op_restore "${RESTORE_SOURCE}" ;;
     nuke) op_nuke ;;
-    -h | --help | help | "") usage ;;
-    *)
-      usage >&2
-      fail "Unknown operation: $1"
-      ;;
   esac
 }
 

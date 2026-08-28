@@ -272,11 +272,10 @@ Planned operations:
 
 - `init`: create `config/docker/.env` and `config/docker/docker-compose-dev.yml` from tracked safe templates only when absent.
 - `build`: install from the lockfile and build explicit development images before runtime changes.
-- `up`: build, start in the foreground, and verify readiness.
-- `up-detached`: build, start detached, and verify readiness, effective UID, and running image identity.
+- `up` (default command): start in the foreground; `-b` builds first, and the image is built automatically only when absent. `-d` starts detached and verifies readiness, effective UID, and running image identity. Flags combine as `-bd`, matching the owner's other repositories. `up-detached` remains as an alias.
 - `down`: stop services and remove orphans while preserving durable directories.
 - `status`: show service health, image identities, bind mounts, and migration compatibility without exposing secrets.
-- `nuke`: resolve and verify the exact development data path, require interactive confirmation, stop services, and remove only that validated project-owned path.
+- `nuke`: resolve and verify the exact development data path, require confirmation (interactive, or `--confirm <exact path>` for automation), stop services, and remove only that validated project-owned path.
 
 The script must fail with an actionable message when `docker-compose-dev.yml` is missing outside `init`. It must never fall back to production Compose.
 
