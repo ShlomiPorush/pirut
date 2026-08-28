@@ -9,6 +9,10 @@ Versioning scheme selection is deferred until the first release is prepared.
 
 ### Added
 
+- An Isracard statement importer, with a canonical transaction model that keeps amounts in integer minor units, separates the purchase date from the statement's charge date, records the full purchase amount alongside the installment billed this month, marks an inferred exchange rate as derived, and refuses any statement whose rows do not add up to the total the issuer states.
+- A narrow SpreadsheetML reader. A general spreadsheet library could not open a real Isracard export at all: the file is valid OOXML but namespaces every element, omits the shared string table, and stores its core properties outside `docProps/`.
+- A synthetic Isracard fixture and its generator, covering a shekel purchase, a foreign-currency purchase with a discount, a mid-plan installment, a final installment, and a refund. Nothing in it derives from a real statement; see `tests/fixtures/SANITIZATION.md`.
+
 - Repository baseline: approved application stack, dependency manifests, lockfile, TypeScript and lint configuration, and changelog.
 - Health-capable application skeleton: Fastify server with a database-aware `/api/health` endpoint, React interface with Hebrew and English catalogs, right-to-left and left-to-right support, light and dark themes, and an empty Drizzle migration baseline.
 - Docker foundation: multi-stage image running as a dedicated non-root user, production Compose using published images with loopback-only web exposure and an internal-only PostgreSQL service, a tracked development Compose template, and a safe environment contract.
@@ -26,6 +30,8 @@ Versioning scheme selection is deferred until the first release is prepared.
 - Removed a vulnerable `esbuild` reached through a deprecated `drizzle-kit` loader chain, using a scoped pnpm override. The advisory affects the esbuild development server, which this project never runs, so exposure was nil, but the dependency no longer appears at all.
 
 ### Fixed
+
+- The language guard scanned only tracked files, so a new file containing Hebrew passed locally and would have failed only after being committed and pushed. It now scans untracked files too.
 
 - The dependency audit only inspected production dependencies, so a development-only advisory never reached it. Production is now audited at moderate and above, and development dependencies at high and above.
 - The lockfile check compared against `HEAD`, so it failed on legitimate uncommitted dependency work rather than on an actually stale lockfile. It now checks whether resolving changes the lockfile.

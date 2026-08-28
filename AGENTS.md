@@ -20,7 +20,7 @@ This is a public-ready repository.
 
 - Use English for repository documentation, code, identifiers, comments, commits, tests, Issues, pull requests, and GitHub communication.
 - Keep user-facing text in localization files from the first implementation.
-- Hebrew content is allowed only in the exact Hebrew locale and sanitized Hebrew fixture paths approved in the foundation plan.
+- Hebrew content is allowed only in `src/locales/he/`, `tests/fixtures/he/`, and each issuer's format-token module such as `src/importers/isracard/format.ts`. A format module holds the literal strings an issuer writes into its files; those are data tokens, not user-facing text, and nothing in them may be shown to a user.
 - Do not duplicate Hebrew test strings outside those paths.
 
 ## Architecture
