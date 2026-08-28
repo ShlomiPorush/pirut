@@ -3,9 +3,9 @@
 Pirut is a personal-first web application for manually importing and analyzing Israeli credit card
 statements. It is Hebrew-first, single-user, and runs locally in Docker.
 
-The repository currently contains the **foundation only**. The application starts, serves a
-localized interface shell, and reports its health against a real PostgreSQL database. Statement
-import, parsing, categorization, and dashboards are not implemented.
+Today it imports an Isracard statement file through a preview-first flow, stores the transactions
+in PostgreSQL without ever duplicating a row, and shows them by month with totals, installments,
+and refunds. Categorization, insights, and other issuers are not implemented yet.
 
 See [the living project foundation plan](docs/project-foundation.md) for approved decisions,
 implementation status, verification evidence, and remaining blockers.
@@ -13,14 +13,14 @@ implementation status, verification evidence, and remaining blockers.
 ## Requirements
 
 - WSL 2 with Docker Engine and Docker Compose v2
-- Node.js as pinned in [`.node-version`](.node-version), with pnpm enabled through Corepack
+- Node.js matching `engines.node` in `package.json`, with pnpm enabled through Corepack
 
 All workflow scripts are Bash and run inside WSL.
 
 ## Getting started
 
 ```bash
-scripts/local.sh init          # create the machine-local .env and docker-compose-dev.yml
+scripts/local.sh init          # create config/docker/.env and docker-compose-dev.yml
 scripts/local.sh up-detached   # build, start, and verify readiness
 ```
 
@@ -48,7 +48,7 @@ against PostgreSQL.
 
 ## Data location
 
-PostgreSQL data and backups live under the directory named by `PIRUT_DATA_DIR` in `.env`. It must be
+PostgreSQL data and backups live under the directory named by `PIRUT_DATA_DIR` in `config/docker/.env`. It must be
 a Linux-native path: a Windows-drive path under `/mnt/` cannot hold a PostgreSQL cluster, because
 that mount rejects the ownership changes `initdb` requires. `scripts/local.sh init` selects a
 suitable default.

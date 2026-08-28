@@ -39,8 +39,8 @@ Do not hard-code user-facing strings in components or server responses.
 
 ## Docker
 
-- The tracked production definition is root-level `docker-compose.yml` and references published images without `build:`.
-- Root-level `docker-compose-dev.yml` is machine-local and ignored. Ordinary development must invoke it only through `scripts/local.sh`.
+- Everything Docker-related lives under `config/docker/`: the `Dockerfile` and its `Dockerfile.dockerignore`, the tracked production `docker-compose.yml` (published images, no `build:`), the development template, and the machine-local ignored `docker-compose-dev.yml` and `.env` that `scripts/local.sh init` generates there. Compose is always run with that directory as its project directory.
+- The repository root holds only files that tooling must find there. Do not add configuration, reports, or helpers to the root; put them in `config/`, `docs/`, or `scripts/`.
 - `PIRUT_DATA_DIR` must be a Linux-native path. A `/mnt/` path on a Windows drive cannot hold a PostgreSQL cluster.
 - Workflow scripts must build development images explicitly before changing the running environment.
 - Application containers must run as dedicated non-root users and expose meaningful readiness checks.

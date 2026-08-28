@@ -9,7 +9,7 @@ usage() {
 Usage: scripts/local.sh <operation>
 
 Operations:
-  init          Create the machine-local .env and docker-compose-dev.yml from tracked templates.
+  init          Create the machine-local config/docker/.env and docker-compose-dev.yml from templates.
   build         Install from the lockfile and build the development image.
   up            Build, then start in the foreground.
   up-detached   Build, start detached, and verify readiness, runtime identity, and image identity.
@@ -27,18 +27,18 @@ USAGE
 op_init() {
   local data_dir
   if [[ -f "${ENV_FILE}" ]]; then
-    log ".env already exists; leaving it unchanged."
+    log "config/docker/.env already exists; leaving it unchanged."
   else
     data_dir="$(default_data_dir)"
     sed "s|__PIRUT_DATA_DIR__|${data_dir}|" "${DEV_ENV_TEMPLATE}" >"${ENV_FILE}"
-    log "Created .env with PIRUT_DATA_DIR=${data_dir}"
+    log "Created config/docker/.env with PIRUT_DATA_DIR=${data_dir}"
   fi
 
   if [[ -f "${DEV_COMPOSE_FILE}" ]]; then
-    log "docker-compose-dev.yml already exists; leaving it unchanged."
+    log "config/docker/docker-compose-dev.yml already exists; leaving it unchanged."
   else
     cp "${DEV_COMPOSE_TEMPLATE}" "${DEV_COMPOSE_FILE}"
-    log "Created docker-compose-dev.yml"
+    log "Created config/docker/docker-compose-dev.yml"
   fi
 
   data_dir="$(resolve_data_dir)"
@@ -55,7 +55,7 @@ op_build() {
   (cd "${REPO_ROOT}" && pnpm install --frozen-lockfile)
 
   log "Building ${DEV_IMAGE}"
-  docker build -t "${DEV_IMAGE}" "${REPO_ROOT}"
+  build_image "${DEV_IMAGE}"
 }
 
 wait_for_health() {

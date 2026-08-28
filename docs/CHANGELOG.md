@@ -34,6 +34,10 @@ Versioning scheme selection is deferred until the first release is prepared.
 
 - Removed a vulnerable `esbuild` reached through a deprecated `drizzle-kit` loader chain, using a scoped pnpm override. The advisory affects the esbuild development server, which this project never runs, so exposure was nil, but the dependency no longer appears at all.
 
+### Changed
+
+- The repository root now holds only the files tooling must find there. Docker files moved to `config/docker/` (including the machine-local `.env` and `docker-compose-dev.yml`), the ESLint and Vitest configs to `config/`, the changelog to `docs/`, and the security policy to `.github/`. `.prettierignore` and `.node-version` were removed: Prettier exclusions are negated globs in the `format` scripts, and `engines.node` in `package.json` is the single Node version contract.
+
 ### Fixed
 
 - The language guard scanned only tracked files, so a new file containing Hebrew passed locally and would have failed only after being committed and pushed. It now scans untracked files too.

@@ -29,7 +29,7 @@ updates:
         update-types: ["minor", "patch"]
 
   - package-ecosystem: docker
-    directory: /
+    directory: /config/docker
     schedule:
       interval: weekly
       day: monday
@@ -37,7 +37,7 @@ updates:
       prefix: "build"
     ignore:
       # The Node major is a recorded stack decision, not a routine update: it must move
-      # together with .node-version and engines.node. Node 26 also drops Corepack, which
+      # together with engines.node in package.json. Node 26 also drops Corepack, which
       # the image relies on. Raise it deliberately, not through an automated pull request.
       - dependency-name: node
         update-types: ["version-update:semver-major"]
