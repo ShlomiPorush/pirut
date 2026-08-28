@@ -1,3 +1,4 @@
+import { memoryAdapter } from "better-auth/adapters/memory";
 import type {
   CommitResult,
   ImportService,
@@ -7,17 +8,57 @@ import type {
   StoredTransaction,
   TransactionFilter,
 } from "../../src/application/import-contracts.ts";
+import { createAuth, type AuthInstance } from "../../src/infrastructure/auth/auth.ts";
 import type { DatabaseHandle } from "../../src/infrastructure/db/client.ts";
 import type { ServerConfig } from "../../src/server/config.ts";
 
 /** Shared fakes for the HTTP tests. Nothing here touches a database or a real statement. */
+
+/** Long enough to satisfy the configuration loader, and obviously not a real secret. */
+const TEST_AUTH_SECRET = "test-secret-that-is-long-enough-for-better-auth";
 
 export const testConfig: ServerConfig = {
   host: "127.0.0.1",
   port: 4610,
   databaseUrl: "postgres://unused",
   staticRoot: undefined,
+  publicUrl: "http://localhost:4610",
+  authSecret: TEST_AUTH_SECRET,
+  trustedOrigins: [],
 };
+
+/**
+ * A real Better Auth instance backed by the in-memory adapter, so the auth tests exercise
+ * the actual library, hooks, cookies, and policy without needing PostgreSQL.
+ *
+ * Each call gets a fresh store, so tests cannot leak members into one another.
+ */
+export function memoryAuth(): AuthInstance {
+  return createAuth({
+    // The memory adapter reads each model as an existing key rather than creating it on
+    // first write, so every table Better Auth and the passkey plugin use starts empty.
+    adapter: memoryAdapter({ user: [], session: [], account: [], verification: [], passkey: [] }),
+    publicUrl: testConfig.publicUrl,
+    authSecret: testConfig.authSecret,
+  });
+}
+
+/**
+ * A stand-in for tests that are not about authentication.
+ *
+ * It reports a signed-in member for every request, so the import and health tests exercise
+ * their own behaviour rather than re-testing the session guard. Only the two members
+ * `buildApp` actually calls are implemented, which is why the cast is needed.
+ */
+export function fakeAuth(): AuthInstance {
+  const user = { id: "member-1", name: "Test Member", email: "member@example.test" };
+  return {
+    api: {
+      getSession: async () => ({ user, session: { id: "session-1", userId: user.id } }),
+    },
+    handler: async () => new Response(null, { status: 404 }),
+  } as unknown as AuthInstance;
+}
 
 export function fakeDatabase(connected: boolean): DatabaseHandle {
   return {

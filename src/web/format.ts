@@ -72,3 +72,19 @@ export function formatMonth(locale: string, monthKey: string): string {
     new Date(parts.year, parts.month - 1, 1),
   );
 }
+
+/**
+ * A full timestamp, such as when a passkey was registered. Unlike a statement's calendar
+ * date this one is a real instant, so it is parsed rather than rebuilt from parts.
+ */
+export function formatTimestamp(locale: string, value: string): string {
+  const instant = new Date(value);
+  if (Number.isNaN(instant.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(instant);
+}

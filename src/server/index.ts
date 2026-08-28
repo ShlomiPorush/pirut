@@ -2,6 +2,7 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { createImportService } from "../application/import-service.ts";
+import { createAuth, pirutDrizzleAdapter } from "../infrastructure/auth/auth.ts";
 import { createDatabase } from "../infrastructure/db/client.ts";
 import { buildApp } from "./app.ts";
 import { loadServerConfig } from "./config.ts";
@@ -25,8 +26,15 @@ try {
   throw error;
 }
 
+const auth = createAuth({
+  adapter: pirutDrizzleAdapter(database.db),
+  publicUrl: config.publicUrl,
+  extraTrustedOrigins: config.trustedOrigins,
+  authSecret: config.authSecret,
+});
+
 const importService = createImportService(database.db);
-const app = await buildApp(config, database, importService);
+const app = await buildApp(config, database, importService, auth);
 
 async function shutdown(signal: string): Promise<void> {
   app.log.info({ signal }, "Shutting down");

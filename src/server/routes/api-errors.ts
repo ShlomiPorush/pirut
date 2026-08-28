@@ -1,4 +1,5 @@
-import type { ApiError, ImportErrorCode } from "../../application/import-contracts.ts";
+import type { AuthErrorCode } from "../../application/auth-contracts.ts";
+import type { ImportErrorCode } from "../../application/import-contracts.ts";
 
 /**
  * Translation from thrown values to the API error envelope.
@@ -8,9 +9,22 @@ import type { ApiError, ImportErrorCode } from "../../application/import-contrac
  * messages can quote cell contents.
  */
 
+/**
+ * Every code the API can answer with. The envelope shape is the contract's `ApiError`;
+ * this widens only the set of codes, so an importing client reading `ApiError` still sees
+ * a valid response.
+ */
+export type ApiErrorCode = ImportErrorCode | AuthErrorCode | "internal" | "not_found";
+
+export type ApiErrorBody = {
+  error: ApiErrorCode;
+  /** Debug detail. Never shown to a user; the client localises by `error` code. */
+  detail?: string;
+};
+
 export type ApiErrorResponse = {
   statusCode: number;
-  body: ApiError;
+  body: ApiErrorBody;
 };
 
 /** Where the failure came from, which decides how an unrecognised `Error` is read. */
@@ -19,10 +33,10 @@ export type ErrorSource = "upload" | "query";
 /** Thrown by a route when it already knows the exact code the client should receive. */
 export class ApiProblem extends Error {
   readonly statusCode: number;
-  readonly errorCode: ImportErrorCode;
+  readonly errorCode: ApiErrorCode;
   readonly detail: string | undefined;
 
-  constructor(statusCode: number, errorCode: ImportErrorCode, detail?: string) {
+  constructor(statusCode: number, errorCode: ApiErrorCode, detail?: string) {
     super(errorCode);
     this.name = "ApiProblem";
     this.statusCode = statusCode;

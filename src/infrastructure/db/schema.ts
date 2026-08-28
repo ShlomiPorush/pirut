@@ -96,3 +96,114 @@ export const transactions = pgTable(
     index("transactions_import_id_idx").on(table.importId),
   ],
 );
+
+/**
+ * Better Auth's storage model.
+ *
+ * These five tables are not Pirut's design: they are the shape Better Auth core (user,
+ * session, account, verification) and the passkey plugin declare, and the Drizzle adapter
+ * reads them by property name. Every property below therefore keeps Better Auth's own
+ * camelCase field name, while the SQL column stays snake_case like the rest of this file.
+ * Renaming a property would silently break the adapter, which looks up
+ * `schema[model][field]` and throws only when the query runs.
+ *
+ * `updatedAt` on `session` and `account` has no default in Better Auth's field
+ * definitions, so those columns carry a database default instead of a not-null violation.
+ *
+ * Deleting a member deletes their sessions, accounts, and passkeys. The application also
+ * removes them explicitly, because the cascade is a property of PostgreSQL and the tests
+ * run against an in-memory adapter that has no foreign keys.
+ */
+
+export const authUsers = pgTable("user", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique("user_email_unique"),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  image: text("image"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const authSessions = pgTable(
+  "session",
+  {
+    id: text("id").primaryKey(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    token: text("token").notNull().unique("session_token_unique"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+  },
+  (table) => [index("session_user_id_idx").on(table.userId)],
+);
+
+export const authAccounts = pgTable(
+  "account",
+  {
+    id: text("id").primaryKey(),
+    /** Distinguishes the credential issuer; unique together with `accountId`. */
+    issuer: text("issuer").notNull(),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at", { withTimezone: true }),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { withTimezone: true }),
+    scope: text("scope"),
+    /** The password hash for an email-and-password account. Never returned by the API. */
+    password: text("password"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("account_issuer_account_id_unique").on(table.issuer, table.accountId),
+    index("account_user_id_idx").on(table.userId),
+  ],
+);
+
+export const authVerifications = pgTable(
+  "verification",
+  {
+    id: text("id").primaryKey(),
+    identifier: text("identifier").notNull(),
+    value: text("value").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("verification_identifier_idx").on(table.identifier)],
+);
+
+export const authPasskeys = pgTable(
+  "passkey",
+  {
+    id: text("id").primaryKey(),
+    /** Member-chosen label, so a list of passkeys can name the device. */
+    name: text("name"),
+    publicKey: text("public_key").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    credentialID: text("credential_id").notNull(),
+    counter: integer("counter").notNull(),
+    deviceType: text("device_type").notNull(),
+    backedUp: boolean("backed_up").notNull(),
+    transports: text("transports"),
+    createdAt: timestamp("created_at", { withTimezone: true }),
+    /** Identifies the authenticator model, not the device or the member. */
+    aaguid: text("aaguid"),
+  },
+  (table) => [
+    index("passkey_user_id_idx").on(table.userId),
+    index("passkey_credential_id_idx").on(table.credentialID),
+  ],
+);

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { CommitResult } from "../../src/application/import-contracts.ts";
 import { buildApp, MAX_UPLOAD_BYTES } from "../../src/server/app.ts";
 import {
+  fakeAuth,
   fakeDatabase,
   fakeImportService,
   multipartBody,
@@ -23,7 +24,7 @@ async function startApp(behaviour: FakeBehaviour = {}): Promise<{
   service: FakeImportService;
 }> {
   const service = fakeImportService(behaviour);
-  const app = await buildApp(testConfig, fakeDatabase(true), service);
+  const app = await buildApp(testConfig, fakeDatabase(true), service, fakeAuth());
   running = app;
   return { app, service };
 }
