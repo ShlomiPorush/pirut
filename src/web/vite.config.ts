@@ -16,7 +16,9 @@ export default defineConfig({
   server: {
     host: "127.0.0.1",
     proxy: {
-      "/api": "http://127.0.0.1:4610",
+      // Anchored to the trailing slash: a bare "/api" prefix also captures source
+      // modules such as /api.ts and serves them from the backend instead of Vite.
+      "^/api/": "http://127.0.0.1:4610",
     },
   },
 });

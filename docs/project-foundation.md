@@ -1,6 +1,6 @@
 # Pirut Project Foundation
 
-Status: Foundation complete. All fourteen deliverables are built and verified, including the GitHub collaboration baseline. Product work has not started.
+Status: Foundation complete and the first product slice implemented: statement import to PostgreSQL with a localized interface.
 
 This document separates the repository's current state from the approved foundation that a later implementation task must build. A planned item does not exist until its status and verification evidence say otherwise.
 
@@ -23,8 +23,8 @@ Status vocabulary:
 - CI, dependency automation, the security policy, issue forms, and the backup and restore procedure exist and are working. CI has run green on `main` and on every pull request since it was added.
 - Repository labels and a `main` ruleset are configured. The ruleset requires a pull request, the `CI summary` check, a branch current with `main`, and resolved review conversations, and it blocks deletion and force-push. Repository administrators retain bypass so a solo maintainer cannot be locked out.
 - There is no release artifact and no deployment.
-- There is no statement import behavior, issuer adapter, categorization, or dashboard. Those are product features outside the foundation scope.
-- No Israeli credit card statement sample has been inspected or committed.
+- The first product slice exists: an Isracard importer, a preview-first import flow over HTTP, atomic persistence with duplicate prevention by card and voucher reference, idempotent re-import by source hash, and localized import and transactions screens with monthly summaries. Categorization and dashboards do not exist.
+- A real Isracard export was inspected locally to establish the format. No real statement or value from one has been committed; the tracked fixture is synthetic.
 - Data persistence was verified: a probe row written to PostgreSQL survived a full `down` and `up-detached` cycle, and the guarded `nuke` flow deleted only the validated project-owned path after an exact confirmation.
 - The loopback-only security boundary was verified: `web` publishes `127.0.0.1:4610` and `db` publishes no host port.
 - Backup and restore were implemented and proven with synthetic data, then the test state was removed.
@@ -44,7 +44,7 @@ The product should turn issuer-specific files into a trustworthy canonical trans
 
 - Initial user: the repository owner.
 - Product posture: personal-first, public-ready source code.
-- Stage: foundation implemented; product features not started.
+- Stage: foundation complete; first product slice (import and transactions) implemented.
 - Initial operating environment: a single Windows workstation using Docker through WSL 2.
 
 ### Initial product boundaries

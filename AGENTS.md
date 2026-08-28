@@ -2,11 +2,11 @@
 
 ## Current stage
 
-The repository and runtime foundation is implemented. The application starts in Docker, serves a localized interface shell, and reports health against PostgreSQL. No product feature exists yet.
+The foundation and the first product slice are implemented. The application runs in Docker against PostgreSQL, imports an Isracard statement through a preview-first flow, prevents duplicates, and shows stored transactions with monthly totals.
 
 The living contract is [docs/project-foundation.md](docs/project-foundation.md). It records what is implemented, the verification evidence, deviations forced by the environment, and what remains. Trust its status column over any assumption; a planned item does not exist until the plan records evidence.
 
-Do not add issuer parsers, statement upload behavior, categorization, or dashboards without a separate approved task.
+The Isracard importer and the import and transactions screens exist. Do not add further issuers, categorization, or dashboards without a separate approved task.
 
 ## Product and boundaries
 

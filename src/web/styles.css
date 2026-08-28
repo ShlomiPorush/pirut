@@ -9,6 +9,8 @@
   --status-ready: #0a6b52;
   --status-degraded: #8a5a00;
   --status-error: #a11f2b;
+  /* A refund moves money back, so it reads as the positive direction. */
+  --amount-refund: #0a6b52;
   --radius: 12px;
 }
 
@@ -23,6 +25,7 @@
   --status-ready: #4fd1a5;
   --status-degraded: #e2b04a;
   --status-error: #ff8189;
+  --amount-refund: #4fd1a5;
 }
 
 * {
@@ -138,14 +141,262 @@ button {
 }
 
 button:focus-visible,
-select:focus-visible {
+select:focus-visible,
+input:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .app__footer {
   color: var(--text-muted);
   font-size: 0.9375rem;
+}
+
+/* Navigation */
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.nav__item--active {
+  background: var(--accent);
+  color: var(--surface);
+}
+
+/* Shared pieces */
+
+.note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+}
+
+.alert,
+.outcome {
+  margin: 0;
+  border-inline-start: 4px solid currentcolor;
+  padding-inline-start: 0.75rem;
+  font-weight: 600;
+}
+
+.alert {
+  color: var(--status-error);
+}
+
+.outcome {
+  color: var(--status-ready);
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 0.75rem;
+}
+
+.field__file {
+  font: inherit;
+  color: var(--text);
+}
+
+/* Import preview */
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.preview__heading {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.summary-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.summary-list__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.summary-list dt {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.summary-list dd {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.warnings__heading {
+  margin: 0 0 0.25rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--status-degraded);
+}
+
+.warnings__list {
+  margin: 0;
+  padding-inline-start: 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+}
+
+/* Tables */
+
+.table-scroll {
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.table {
+  width: 100%;
+  min-width: 34rem;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.table__caption {
+  caption-side: top;
+  text-align: start;
+  padding: 0.5rem 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.table th,
+.table td {
+  padding: 0.5rem 0.75rem;
+  text-align: start;
+  vertical-align: top;
+  border-block-end: 1px solid var(--border);
+}
+
+.table th {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.table tbody tr:last-child td {
+  border-block-end: none;
+}
+
+.table__amount {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.table__amount--refund {
+  color: var(--amount-refund);
+  font-weight: 700;
+}
+
+.table__row--muted td {
+  color: var(--text-muted);
+}
+
+.badge {
+  display: inline-block;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.0625rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge--new {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.badge--duplicate {
+  color: var(--text-muted);
+}
+
+.tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.tag {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  padding: 0.0625rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+/* Month strip */
+
+.month-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Grow to share the row evenly, so a narrow screen gets two full-width cards, not three slivers. */
+.month-strip > li {
+  flex: 1 1 9rem;
+}
+
+.month-card {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 0.125rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  text-align: start;
+  color: var(--text);
+  border-color: var(--border);
+  font-weight: 400;
+}
+
+.month-card--active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.month-card__name {
+  font-weight: 700;
+}
+
+.month-card__total {
+  color: var(--accent);
+  font-size: 1.125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.month-card__count {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
 }
 
 @media (max-width: 30rem) {

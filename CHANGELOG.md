@@ -9,6 +9,11 @@ Versioning scheme selection is deferred until the first release is prepared.
 
 ### Added
 
+- Statement import, end to end: a preview-first flow that parses an uploaded Isracard file, shows every row with its new-or-duplicate status, and commits in one database transaction. Committing the same file twice is a no-op by source hash, and rows whose card and voucher reference are already stored are skipped, never duplicated. The raw upload is not retained.
+- PostgreSQL persistence: cards, imports, and transactions tables with unique constraints backing the duplicate rules, created by a migration that runs automatically at server start.
+- Import API: preview, commit, imports, transactions by charge month, and monthly summary endpoints, returning stable machine-readable error codes.
+- Import and transactions screens in Hebrew and English: statement preview with counts and warnings, guarded commit, month cards with totals, and a transaction table with installments, refunds, and issuer notes.
+
 - An Isracard statement importer, with a canonical transaction model that keeps amounts in integer minor units, separates the purchase date from the statement's charge date, records the full purchase amount alongside the installment billed this month, marks an inferred exchange rate as derived, and refuses any statement whose rows do not add up to the total the issuer states.
 - A narrow SpreadsheetML reader. A general spreadsheet library could not open a real Isracard export at all: the file is valid OOXML but namespaces every element, omits the shared string table, and stores its core properties outside `docProps/`.
 - A synthetic Isracard fixture and its generator, covering a shekel purchase, a foreign-currency purchase with a discount, a mid-plan installment, a final installment, and a refund. Nothing in it derives from a real statement; see `tests/fixtures/SANITIZATION.md`.
