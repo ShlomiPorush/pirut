@@ -10,6 +10,9 @@ services:
       PIRUT_PORT: 4610
       PIRUT_LOG_LEVEL: warn
       PIRUT_DATABASE_URL: postgres://pirut:pirut-verify@db:5432/pirut
+      # Fixed, obviously fake, and used only by this disposable stack.
+      PIRUT_AUTH_SECRET: verification-only-secret-not-used-anywhere-else
+      PIRUT_PUBLIC_URL: http://localhost:${PIRUT_WEB_PORT:-4699}
     ports:
       - "127.0.0.1:${PIRUT_WEB_PORT:-4699}:4610"
     networks:

@@ -15,5 +15,10 @@ export default defineConfig({
     // Web tests opt into jsdom with a `@vitest-environment jsdom` docblock.
     environment: "node",
     env: { PIRUT_LOG_LEVEL: "silent" },
+    // The server tests run a real Better Auth instance, which spends several seconds
+    // initialising its crypto the first time a worker builds a context. That cost lands
+    // on whichever test runs first, so the default 5s would fail a test for a reason
+    // unrelated to what it asserts.
+    testTimeout: 30_000,
   },
 });

@@ -8,6 +8,13 @@
       "when": 1787877623403,
       "tag": "0000_talented_wendigo",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787921479971,
+      "tag": "0001_youthful_mikhail_rasputin",
+      "breakpoints": true
     }
   ]
 }

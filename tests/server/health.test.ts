@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { buildApp } from "../../src/server/app.ts";
-import { fakeDatabase, fakeImportService, testConfig } from "./helpers.ts";
+import { fakeAuth, fakeDatabase, fakeImportService, testConfig } from "./helpers.ts";
 
 describe("health endpoint", () => {
   it("reports ready when the database answers", async () => {
-    const app = await buildApp(testConfig, fakeDatabase(true), fakeImportService());
+    const app = await buildApp(testConfig, fakeDatabase(true), fakeImportService(), fakeAuth());
     const response = await app.inject({ method: "GET", url: "/api/health" });
 
     expect(response.statusCode).toBe(200);
@@ -14,7 +14,7 @@ describe("health endpoint", () => {
   });
 
   it("reports degraded with a failing status code when the database is unreachable", async () => {
-    const app = await buildApp(testConfig, fakeDatabase(false), fakeImportService());
+    const app = await buildApp(testConfig, fakeDatabase(false), fakeImportService(), fakeAuth());
     const response = await app.inject({ method: "GET", url: "/api/health" });
 
     expect(response.statusCode).toBe(503);

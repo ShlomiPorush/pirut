@@ -378,17 +378,30 @@ check_dependency_audit() {
 # is pinned by an override. Running generate proves that chain still works, and an
 # unexpected new migration means a schema change was committed without one.
 check_migration_generation() {
-  (cd "${REPO_ROOT}" && PIRUT_DATABASE_URL="postgres://unused" pnpm run db:generate >/dev/null) || {
-    printf 'drizzle-kit could not generate migrations.\n' >&2
-    return 1
-  }
-  local dirty
-  dirty="$(git -C "${REPO_ROOT}" status --porcelain -- db/migrations)"
-  if [[ -n "${dirty}" ]]; then
-    printf 'Generating migrations changed db/migrations. Commit the generated migration:\n%s\n' \
-      "${dirty}" >&2
+  # The question is whether the schema and the migrations agree, not whether the migration
+  # has been committed yet. Comparing against the git index failed on a legitimately new
+  # migration that was staged but not committed, so compare the directory against itself
+  # across a generation run instead.
+  local before after
+  before="$(mktemp)"
+  after="$(mktemp)"
+  (cd "${REPO_ROOT}" && find db/migrations -type f -exec sha256sum {} + | sort) >"${before}"
+
+  if ! (cd "${REPO_ROOT}" && PIRUT_DATABASE_URL="postgres://unused" pnpm run db:generate >/dev/null); then
+    printf 'drizzle-kit could not generate migrations.
+' >&2
+    rm -f "${before}" "${after}"
     return 1
   fi
+
+  (cd "${REPO_ROOT}" && find db/migrations -type f -exec sha256sum {} + | sort) >"${after}"
+  if ! diff -q "${before}" "${after}" >/dev/null; then
+    printf 'The schema has changes with no migration. Run: pnpm run db:generate
+' >&2
+    rm -f "${before}" "${after}"
+    return 1
+  fi
+  rm -f "${before}" "${after}"
 }
 
 check_lockfile_is_current() {

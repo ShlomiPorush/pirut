@@ -9,6 +9,13 @@ Versioning scheme selection is deferred until the first release is prepared.
 
 ### Added
 
+- A login. Better Auth 1.7.2 provides password hashing, sessions, cookies, CSRF, and passkeys; Pirut adds only the household policy on top. Every `/api/` route except health, the auth routes, and the setup routes now requires a session and answers 401 without one.
+- First-run setup: the first visit creates the household's first account and signs it in. Public sign-up is closed from that moment, so only a signed-in member can add another.
+- Passkeys, through the Better Auth plugin: sign in with one, and add or remove them in settings. Passkeys need HTTPS or localhost, which the settings screen states.
+- Household management: every member sees and imports the same transactions. Members can be listed, added, and removed, with the last member and self-removal both refused.
+- Rate limiting on Pirut's own credential routes. Better Auth limits only the routes its own router serves, and setup and member creation call it directly, so they were unbounded.
+- `PIRUT_TRUSTED_ORIGINS` for a reverse proxy or a second name, alongside `PIRUT_PUBLIC_URL` and the required `PIRUT_AUTH_SECRET`.
+
 - Statement import, end to end: a preview-first flow that parses an uploaded Isracard file, shows every row with its new-or-duplicate status, and commits in one database transaction. Committing the same file twice is a no-op by source hash, and rows whose card and voucher reference are already stored are skipped, never duplicated. The raw upload is not retained.
 - PostgreSQL persistence: cards, imports, and transactions tables with unique constraints backing the duplicate rules, created by a migration that runs automatically at server start.
 - Import API: preview, commit, imports, transactions by charge month, and monthly summary endpoints, returning stable machine-readable error codes.

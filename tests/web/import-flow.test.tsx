@@ -5,6 +5,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../../src/web/App.tsx";
 import he from "../../src/locales/he/common.json" with { type: "json" };
 
+// The shell imports the Better Auth client, which has no place in an import test.
+vi.mock("../../src/web/auth-client.ts", () => ({
+  signInWithPassword: vi.fn(),
+  signInWithPasskey: vi.fn(),
+  signOut: vi.fn(async () => undefined),
+  passkeyAutofillAvailable: vi.fn(async () => false),
+  listPasskeys: vi.fn(async () => ({ ok: true, value: [] })),
+  addPasskey: vi.fn(),
+  removePasskey: vi.fn(),
+}));
+
+const MEMBER = { id: "member-1", name: "Dana", email: "dana@example.test" };
+
 type Route = { url: string; init?: RequestInit };
 
 function json(body: unknown, status = 200): Response {
@@ -70,6 +83,9 @@ function stubApi(handler: (url: string) => Response): void {
 }
 
 function defaultHandler(url: string): Response {
+  if (url.startsWith("/api/setup/status")) {
+    return json({ needsFirstUser: false, user: MEMBER });
+  }
   if (url.startsWith("/api/health")) {
     return json({ status: "ready" });
   }
@@ -94,7 +110,8 @@ function statementFile(): File {
 async function openImportView(): Promise<ReturnType<typeof userEvent.setup>> {
   const user = userEvent.setup();
   render(<App />);
-  await user.click(screen.getByRole("button", { name: he.nav.import }));
+  // The navigation appears only once the shell knows a member is signed in.
+  await user.click(await screen.findByRole("button", { name: he.nav.import }));
   return user;
 }
 

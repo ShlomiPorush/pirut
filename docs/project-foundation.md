@@ -73,7 +73,9 @@ Explicitly out of scope for the initial product:
 
 The approved initial shape is a Dockerized local web application backed by PostgreSQL. The web service must bind to loopback by default. PostgreSQL must be reachable only on the internal Compose network.
 
-The initial product may omit authentication only while it is verifiably loopback-only and single-user. Exposing the application to a LAN, reverse proxy, tunnel, or public network is blocked until an authentication, authorization, TLS, session, and threat-model decision is approved and implemented.
+Authentication is implemented. Better Auth owns credentials, sessions, and passkeys; every API route except health, auth, and setup requires a session. The household model, decided by the owner on 2026-08-28, is that all members share one set of data: accounts gate access rather than partition it.
+
+TLS is the owner's reverse proxy's responsibility, not this process's. `PIRUT_PUBLIC_URL` and `PIRUT_TRUSTED_ORIGINS` must name the addresses the household actually opens, because an unlisted origin is refused. Passkeys additionally require HTTPS or localhost, since WebAuthn rejects a bare IP address as a relying party.
 
 The application must not send financial data, file contents, merchant names, analytics, or telemetry to external services by default.
 
