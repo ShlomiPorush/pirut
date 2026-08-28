@@ -8,6 +8,8 @@ import {
   type SupportedLocale,
 } from "../locales/index.ts";
 import { readStoredLocale, storeLocale } from "./i18n.ts";
+import ImportView from "./ImportView.tsx";
+import TransactionsView from "./TransactionsView.tsx";
 import {
   isThemePreference,
   readStoredTheme,
@@ -28,11 +30,26 @@ const THEME_LABEL_KEYS: Record<ThemePreference, string> = {
   dark: "settings.themeDark",
 };
 
+/** Two views is the whole application for now, so state replaces a router. */
+const VIEWS = ["transactions", "import"] as const;
+
+type View = (typeof VIEWS)[number];
+
+const VIEW_LABEL_KEYS: Record<View, string> = {
+  transactions: "nav.transactions",
+  import: "nav.import",
+};
+
 export default function App() {
   const { t, i18n } = useTranslation();
   const [locale, setLocale] = useState<SupportedLocale>(readStoredLocale);
   const [themePreference, setThemePreference] = useState<ThemePreference>(readStoredTheme);
   const [health, setHealth] = useState<HealthState>({ kind: "checking" });
+  const [view, setView] = useState<View>("transactions");
+
+  const showImport = useCallback(() => {
+    setView("import");
+  }, []);
 
   useEffect(() => {
     void i18n.changeLanguage(locale);
@@ -85,6 +102,28 @@ export default function App() {
         <h1 className="app__title">{t("app.name")}</h1>
         <p className="app__tagline">{t("app.tagline")}</p>
       </header>
+
+      <nav className="nav" aria-label={t("nav.label")}>
+        {VIEWS.map((value) => (
+          <button
+            key={value}
+            type="button"
+            className={`nav__item${view === value ? " nav__item--active" : ""}`}
+            aria-current={view === value ? "page" : undefined}
+            onClick={() => {
+              setView(value);
+            }}
+          >
+            {t(VIEW_LABEL_KEYS[value])}
+          </button>
+        ))}
+      </nav>
+
+      {view === "transactions" ? (
+        <TransactionsView locale={locale} onImportRequested={showImport} />
+      ) : (
+        <ImportView locale={locale} />
+      )}
 
       <section className="panel" aria-live="polite">
         <h2 className="panel__heading">{t("status.heading")}</h2>

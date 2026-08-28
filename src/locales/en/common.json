@@ -6,6 +6,11 @@
     "name": "Pirut",
     "tagline": "Understand your Israeli credit card spending"
   },
+  "nav": {
+    "label": "Sections",
+    "transactions": "Transactions",
+    "import": "Import a statement"
+  },
   "status": {
     "heading": "System status",
     "checking": "Checking system status",
@@ -24,7 +29,61 @@
     "themeDark": "Dark",
     "themeSystem": "System"
   },
+  "import": {
+    "heading": "Import a statement",
+    "fileLabel": "Statement file",
+    "fileHint": "Choose the Excel (.xlsx) statement you downloaded from the card issuer.",
+    "privacyNote": "The file is read on your own machine to build the preview, and the file itself is never kept.",
+    "previewing": "Reading the statement",
+    "committing": "Importing the statement",
+    "previewHeading": "Statement preview",
+    "tableCaption": "Rows found in this statement",
+    "card": "Card",
+    "cardValue": "{{label}}, ending {{digits}}",
+    "chargeDate": "Charge date",
+    "statedTotal": "Total stated by the issuer",
+    "newCount": "New transactions",
+    "duplicateCount": "Already imported",
+    "totalCount": "Rows in the statement",
+    "warningsHeading": "Worth checking before you import",
+    "statusNew": "New",
+    "statusDuplicate": "Already imported",
+    "commit": "Import into Pirut",
+    "nothingToImport": "Every row in this statement is already stored, so there is nothing left to import.",
+    "importedResult": "Imported {{inserted}} transactions and skipped {{skipped}} that were already stored.",
+    "alreadyImportedResult": "This exact file was imported before, so nothing changed."
+  },
+  "transactions": {
+    "heading": "Transactions",
+    "monthsHeading": "Recent months",
+    "loading": "Loading",
+    "selectMonth": "Choose a month to see its transactions.",
+    "monthCount": "{{value}} transactions",
+    "tableCaption": "Transactions charged in {{month}}",
+    "noDataYet": "Nothing has been imported yet. Import a statement and your months will appear here.",
+    "goToImport": "Import your first statement",
+    "emptyMonth": "No transactions are stored for this month. Pick another month, or import the statement that covers it."
+  },
+  "table": {
+    "purchaseDate": "Purchase date",
+    "merchant": "Merchant",
+    "originalAmount": "Original amount",
+    "billedAmount": "Billed",
+    "installment": "Payment",
+    "installmentValue": "{{number}}/{{total}}",
+    "status": "Status",
+    "tags": "Notes"
+  },
+  "errors": {
+    "notAStatement": "This file does not look like a card statement. Download the statement again from the issuer, then choose the new file.",
+    "statementDoesNotReconcile": "The rows in this file do not add up to the total it states, so nothing was imported. Download the statement again and try once more.",
+    "unsupportedFile": "Only Excel (.xlsx) statements can be imported. Export the statement as Excel and choose that file.",
+    "fileTooLarge": "This file is too large to import. Choose a single monthly statement rather than a full export.",
+    "invalidFilter": "That month cannot be shown. Choose a month from the list above.",
+    "internal": "Something went wrong while handling the file. Try again, and if it keeps failing, check the server logs.",
+    "network": "The application server did not answer. Check that it is running, then try again."
+  },
   "foundation": {
-    "notice": "This is the foundation skeleton. Statement import and analysis are not implemented yet."
+    "notice": "A personal project. Statements are parsed on your own machine and only the parsed transactions are stored."
   }
 }
