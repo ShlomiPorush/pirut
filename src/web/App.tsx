@@ -12,6 +12,7 @@ import { fetchAuthStatus, onUnauthorized, type ApiResult } from "./api.ts";
 import { signOut } from "./auth-client.ts";
 import { readStoredLocale, storeLocale } from "./i18n.ts";
 import ImportView from "./ImportView.tsx";
+import InsightsView from "./InsightsView.tsx";
 import LoginView from "./LoginView.tsx";
 import SettingsView from "./SettingsView.tsx";
 import SetupView from "./SetupView.tsx";
@@ -43,12 +44,13 @@ const THEME_LABEL_KEYS: Record<ThemePreference, string> = {
   dark: "settings.themeDark",
 };
 
-/** Three views is the whole application for now, so state replaces a router. */
-const VIEWS = ["transactions", "import", "settings"] as const;
+/** Four views is the whole application for now, so state replaces a router. */
+const VIEWS = ["insights", "transactions", "import", "settings"] as const;
 
 type View = (typeof VIEWS)[number];
 
 const VIEW_LABEL_KEYS: Record<View, string> = {
+  insights: "nav.insights",
   transactions: "nav.transactions",
   import: "nav.import",
   settings: "nav.settings",
@@ -71,7 +73,7 @@ export default function App() {
   const [locale, setLocale] = useState<SupportedLocale>(readStoredLocale);
   const [themePreference, setThemePreference] = useState<ThemePreference>(readStoredTheme);
   const [health, setHealth] = useState<HealthState>({ kind: "checking" });
-  const [view, setView] = useState<View>("transactions");
+  const [view, setView] = useState<View>("insights");
   const [session, setSession] = useState<Session>({ kind: "loading" });
 
   const showImport = useCallback(() => {
@@ -112,7 +114,7 @@ export default function App() {
     () =>
       onUnauthorized(() => {
         setSession({ kind: "signedOut" });
-        setView("transactions");
+        setView("insights");
       }),
     [],
   );
@@ -120,7 +122,7 @@ export default function App() {
   const handleSignOut = useCallback(() => {
     void signOut().then(() => {
       setSession({ kind: "signedOut" });
-      setView("transactions");
+      setView("insights");
     });
   }, []);
 
@@ -199,6 +201,9 @@ export default function App() {
 
       {signedIn && view === "transactions" ? (
         <TransactionsView locale={locale} onImportRequested={showImport} />
+      ) : null}
+      {signedIn && view === "insights" ? (
+        <InsightsView locale={locale} onImportRequested={showImport} />
       ) : null}
       {signedIn && view === "import" ? <ImportView locale={locale} /> : null}
       {signedIn && view === "settings" ? <SettingsView locale={locale} /> : null}

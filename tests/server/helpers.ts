@@ -8,6 +8,7 @@ import type {
   StoredTransaction,
   TransactionFilter,
 } from "../../src/application/import-contracts.ts";
+import type { InsightsReport } from "../../src/application/insight-contracts.ts";
 import { createAuth, type AuthInstance } from "../../src/infrastructure/auth/auth.ts";
 import type { DatabaseHandle } from "../../src/infrastructure/db/client.ts";
 import type { ServerConfig } from "../../src/server/config.ts";
@@ -134,12 +135,23 @@ export const sampleSummary: readonly MonthlySummary[] = [
   { month: "2026-08", billedMinorUnits: 12_345, currency: "ILS", transactionCount: 1 },
 ];
 
+export const sampleInsights: InsightsReport = {
+  latestChargeMonth: "2026-08",
+  importedMonthCount: 3,
+  recurringCharges: [],
+  recurringAmountChanges: [],
+  suspectedDuplicateCharges: [],
+  stoppedRecurringCharges: [],
+  installmentCommitments: [],
+};
+
 export type ServiceCalls = {
   preview: Uint8Array[];
   commit: Uint8Array[];
   listImports: number;
   listTransactions: TransactionFilter[];
   monthlySummary: number[];
+  insights: number;
 };
 
 export type FakeBehaviour = Partial<ImportService>;
@@ -154,6 +166,7 @@ export function fakeImportService(behaviour: FakeBehaviour = {}): FakeImportServ
     listImports: 0,
     listTransactions: [],
     monthlySummary: [],
+    insights: 0,
   };
 
   const defaultCommit: CommitResult = {
@@ -188,6 +201,10 @@ export function fakeImportService(behaviour: FakeBehaviour = {}): FakeImportServ
       return behaviour.monthlySummary === undefined
         ? sampleSummary
         : await behaviour.monthlySummary(monthLimit);
+    },
+    insights: async () => {
+      calls.insights += 1;
+      return behaviour.insights === undefined ? sampleInsights : await behaviour.insights();
     },
   };
 }

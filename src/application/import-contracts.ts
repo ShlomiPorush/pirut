@@ -4,6 +4,7 @@ import type {
   ParsedStatement,
   StatementMetadata,
 } from "../domain/transaction.ts";
+import type { InsightsReport } from "./insight-contracts.ts";
 
 /**
  * The contract between the import service, the HTTP API, and the interface.
@@ -105,6 +106,7 @@ export interface ImportService {
   listImports(): Promise<readonly StoredImport[]>;
   listTransactions(filter: TransactionFilter): Promise<readonly StoredTransaction[]>;
   monthlySummary(monthLimit: number): Promise<readonly MonthlySummary[]>;
+  insights(): Promise<InsightsReport>;
 }
 
 /** Stable machine-readable error codes carried across the API boundary. */

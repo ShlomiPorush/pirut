@@ -8,6 +8,7 @@ import type {
   StoredTransaction,
   TransactionFilter,
 } from "../../application/import-contracts.ts";
+import type { InsightsReport } from "../../application/insight-contracts.ts";
 import { ApiProblem } from "./api-errors.ts";
 
 /**
@@ -133,5 +134,10 @@ export const importRoutes: FastifyPluginAsync<ImportRoutesOptions> = async (app,
     const monthLimit = parseSummaryMonths(request.query);
     const months: readonly MonthlySummary[] = await importService.monthlySummary(monthLimit);
     return reply.code(200).send({ months });
+  });
+
+  app.get("/api/insights", async (_request, reply) => {
+    const insights: InsightsReport = await importService.insights();
+    return reply.code(200).send(insights);
   });
 };

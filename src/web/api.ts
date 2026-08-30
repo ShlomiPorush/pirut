@@ -12,6 +12,7 @@ import type {
   StatementPreview,
   StoredTransaction,
 } from "../application/import-contracts.ts";
+import type { InsightsReport } from "../application/insight-contracts.ts";
 
 /**
  * The API's own codes plus the two failures that never reach it: a server error with no
@@ -171,6 +172,27 @@ export async function fetchTransactions(
   return result.ok
     ? { ok: true, value: readArray<StoredTransaction>(result.value, "transactions") }
     : result;
+}
+
+export async function fetchInsights(): Promise<ApiResult<InsightsReport>> {
+  const result = await request<unknown>("/api/insights");
+  if (!result.ok) return result;
+  const body =
+    typeof result.value === "object" && result.value !== null
+      ? (result.value as Record<string, unknown>)
+      : {};
+  return {
+    ok: true,
+    value: {
+      latestChargeMonth: typeof body.latestChargeMonth === "string" ? body.latestChargeMonth : null,
+      importedMonthCount: typeof body.importedMonthCount === "number" ? body.importedMonthCount : 0,
+      recurringCharges: readArray(result.value, "recurringCharges"),
+      recurringAmountChanges: readArray(result.value, "recurringAmountChanges"),
+      suspectedDuplicateCharges: readArray(result.value, "suspectedDuplicateCharges"),
+      stoppedRecurringCharges: readArray(result.value, "stoppedRecurringCharges"),
+      installmentCommitments: readArray(result.value, "installmentCommitments"),
+    },
+  };
 }
 
 function readUser(value: unknown): AuthUser | null {

@@ -6,6 +6,7 @@ import type { CanonicalTransaction, ParsedStatement } from "../domain/transactio
 import { parseIsracardStatement } from "../importers/isracard/parse.ts";
 import type { Database } from "../infrastructure/db/client.ts";
 import { cards, imports, transactions } from "../infrastructure/db/schema.ts";
+import { analyseInsights } from "./insight-service.ts";
 import type {
   CommitResult,
   ImportService,
@@ -322,6 +323,13 @@ export function createImportServiceOver(storage: ImportStorage): ImportService {
       // Grouping stays in a pure function; the query returns only the three columns a
       // total needs, which is cheap at the scale a personal statement archive reaches.
       return summariseByMonth(await storage.listChargeTotals(), monthLimit);
+    },
+    async insights() {
+      const [storedTransactions, storedImports] = await Promise.all([
+        storage.listTransactions(undefined),
+        storage.listImports(),
+      ]);
+      return analyseInsights(storedTransactions, storedImports);
     },
   };
 }

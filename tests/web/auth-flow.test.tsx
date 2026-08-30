@@ -227,7 +227,7 @@ describe("sign-in", () => {
 describe("an expired session", () => {
   it("returns the viewer to sign-in when a data call is refused", async () => {
     stubApi((url) =>
-      url.startsWith("/api/summary") ? json({ error: "unauthorized" }, 401) : signedIn(url),
+      url.startsWith("/api/insights") ? json({ error: "unauthorized" }, 401) : signedIn(url),
     );
     render(<App />);
 

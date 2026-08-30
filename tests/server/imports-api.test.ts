@@ -8,6 +8,7 @@ import {
   fakeImportService,
   multipartBody,
   sampleImports,
+  sampleInsights,
   samplePreview,
   sampleSummary,
   sampleTransactions,
@@ -336,6 +337,18 @@ describe("GET /api/summary", () => {
       expect(service.calls.monthlySummary).toHaveLength(0);
     });
   }
+});
+
+describe("GET /api/insights", () => {
+  it("returns the derived insights report", async () => {
+    const { app, service } = await startApp();
+
+    const response = await app.inject({ method: "GET", url: "/api/insights" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual(sampleInsights);
+    expect(service.calls.insights).toBe(1);
+  });
 });
 
 describe("unknown API routes", () => {

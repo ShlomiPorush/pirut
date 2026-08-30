@@ -23,7 +23,8 @@ Status vocabulary:
 - CI, dependency automation, the security policy, issue forms, and the backup and restore procedure exist and are working. CI has run green on `main` and on every pull request since it was added.
 - Repository labels and a `main` ruleset are configured. The ruleset requires a pull request, the `CI summary` check, a branch current with `main`, and resolved review conversations, and it blocks deletion and force-push. Repository administrators retain bypass so a solo maintainer cannot be locked out.
 - There is no release artifact and no deployment.
-- The first product slice exists: an Isracard importer, a preview-first import flow over HTTP, atomic persistence with duplicate prevention by card and voucher reference, idempotent re-import by source hash, and localized import and transactions screens with monthly summaries. Categorization and dashboards do not exist.
+- The first product slices exist: an Isracard importer, a preview-first import flow over HTTP, atomic persistence with duplicate prevention by card and voucher reference, idempotent re-import by source hash, localized import and transaction screens with monthly summaries, and a localized insights dashboard. Categorization does not exist.
+- The insights dashboard derives monthly recurring charges, recurring amount changes, suspected duplicate charges, possibly stopped recurring charges, and current installment commitments without persisting guesses as facts. Foreign charges are compared in their original currency. The exact domain terms and evidence thresholds live in `CONTEXT.md`.
 - A real Isracard export was inspected locally to establish the format. No real statement or value from one has been committed; the tracked fixture is synthetic.
 - Data persistence was verified: a probe row written to PostgreSQL survived a full `down` and `up-detached` cycle, and the guarded `nuke` flow deleted only the validated project-owned path after an exact confirmation.
 - `scripts/local.sh up -d` inspects the running container and warns when a published port is not bound to `127.0.0.1`. It never changes the developer's machine-local Compose file or stops a running service: the development environment is the owner's, and the owner may deliberately publish the development instance on the LAN. The tracked template and the production Compose file remain loopback-only.
@@ -119,16 +120,16 @@ The repository is public-ready even if a future development environment or deplo
 
 The application is one deployable unit with internal module boundaries. A split into services is not justified for the initial single-user product.
 
-| Component             | Responsibility                                                                                                | Expected path                              | Status  | Dependencies or blockers                                       |
-| --------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ------- | -------------------------------------------------------------- |
-| Web presentation      | Localized RTL/LTR interface, uploads, previews, corrections, dashboards, light and dark themes                | `src/web/`                                 | PLANNED | Confirm the provisional web stack and accessibility baseline.  |
-| Application layer     | Coordinate import, preview, commit, categorization, query, and export use cases                               | `src/application/`                         | PLANNED | Canonical domain vocabulary and persistence interfaces.        |
-| Canonical domain      | Issuer-independent statements, imports, cards, transactions, installments, refunds, merchants, and categories | `src/domain/`                              | PLANNED | Inspect sanitized issuer samples before finalizing invariants. |
-| Issuer adapters       | Detect, parse, validate, and map each supported issuer format without leaking issuer columns into the domain  | `src/importers/`                           | BLOCKED | Sanitized representative files from Isracard, max, and Cal.    |
-| Persistence           | PostgreSQL repositories, transactions, migrations, and database constraints                                   | `src/infrastructure/db/`, `db/migrations/` | PLANNED | Confirm Drizzle or choose another migration contract.          |
-| Localization          | English and Hebrew message catalogs with no hard-coded user-facing text                                       | `src/locales/en/`, `src/locales/he/`       | PLANNED | Select localization library with framework choice.             |
-| Verification fixtures | Synthetic and sanitized issuer samples, malformed cases, and expected canonical results                       | `tests/fixtures/he/`                       | BLOCKED | Real format evidence and a documented sanitization review.     |
-| PostgreSQL service    | Durable local state, constraints, reporting queries, migration target                                         | Docker service `db`                        | PLANNED | Production and development Compose definitions.                |
+| Component             | Responsibility                                                                                               | Expected path                              | Status      | Dependencies or blockers                                                       |
+| --------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------ | ----------- | ------------------------------------------------------------------------------ |
+| Web presentation      | Localized RTL/LTR imports, transactions, insights, settings, and complete light and dark themes              | `src/web/`                                 | IMPLEMENTED | Categorization and correction workflows remain future slices.                  |
+| Application layer     | Coordinate import, preview, commit, transaction queries, summaries, and derived insights                     | `src/application/`                         | IMPLEMENTED | Categorization and export use cases do not exist.                              |
+| Canonical domain      | Issuer-independent statements, cards, transactions, amounts, installments, refunds, and insight terminology  | `src/domain/`, `CONTEXT.md`                | IMPLEMENTED | Merchant aliases and categories remain unresolved.                             |
+| Issuer adapters       | Detect, parse, validate, and map each supported issuer format without leaking issuer columns into the domain | `src/importers/`                           | IMPLEMENTED | Isracard XLSX is implemented; every further issuer remains blocked.            |
+| Persistence           | PostgreSQL repositories, transactions, migrations, and database constraints                                  | `src/infrastructure/db/`, `db/migrations/` | IMPLEMENTED | No insight-specific persistence is needed because results derive from history. |
+| Localization          | English and Hebrew message catalogs with no hard-coded user-facing text                                      | `src/locales/en/`, `src/locales/he/`       | IMPLEMENTED | Locale completeness is verified automatically.                                 |
+| Verification fixtures | Synthetic issuer samples, malformed cases, and expected canonical and insight results                        | `tests/fixtures/he/`, `tests/`             | IMPLEMENTED | Only Isracard has representative format evidence.                              |
+| PostgreSQL service    | Durable local state, constraints, reporting queries, migration target                                        | Docker service `db`                        | IMPLEMENTED | Runs on the internal Docker network.                                           |
 
 ### Import transaction boundary
 
@@ -158,6 +159,16 @@ An importer must never persist partial results after a failed commit. Reimportin
 - Merchant aliases in Hebrew and English.
 - Transfers, fees, interest, cash withdrawals, and non-purchase rows.
 - File encoding, locale-specific numbers, time zones, and date formats.
+
+### Insight semantics
+
+- Insights are derived on demand from canonical transactions and imported-statement coverage. A derived pattern is never persisted or presented as an issuer-stated fact.
+- Monthly recurrence requires one positive non-installment charge from the same normalized merchant in each of three consecutive imported statement months for the same card.
+- A recurring amount change requires two equal preceding comparison amounts followed by a different latest amount. Non-ILS purchases use the original amount and currency; ILS purchases use the billed amount.
+- A suspected duplicate requires distinct issuer references with the same card, purchase date, charge month, normalized merchant, and comparison amount. The result remains a prompt to review because statements do not provide transaction time.
+- A possibly stopped recurring charge requires three consecutive occurrences, an imported next statement month for the same card, and no later occurrence.
+- An installment commitment comes only from the latest imported statement month for its card. Payments left are exact from the installment index and total; the remaining amount is explicitly an estimate based on the current payment.
+- `CONTEXT.md` is the canonical glossary for these terms.
 
 ## Data and privacy contract
 
@@ -365,6 +376,12 @@ The separate foundation implementation task may start when:
 - Any sample used for automated tests is synthetic or irreversibly sanitized and approved for public tracking. Not applicable to the foundation task, which uses no statement samples.
 - Authority for GitHub Actions, Dependabot, labels, templates, settings, or branch rules is confirmed before those external changes. Partly met: the owner authorized continuing through the remaining deliverables, so tracked workflow, Dependabot, security-policy, and issue-form files were added. Repository settings themselves, meaning labels and branch rules, were not changed and still require explicit authorization.
 - The implementer confirms that product parsing and dashboard features remain out of scope for the foundation task. Confirmed by the implementer on 2026-08-27.
+
+## Insights slice implementation
+
+The insights slice was implemented on 2026-08-28 without a migration because every required amount, currency, date, card, reference, and installment field was already canonical and stored. The implementation adds an on-demand analysis service, a guarded `/api/insights` endpoint, an insights landing screen, the missing original-amount column in stored transactions, and a project glossary in `CONTEXT.md`.
+
+`scripts/verify.sh --full` passed with 166 tests across 16 files, a production web and server build, migration-generation validation, dependency audits, Docker image UID 10001, and a live PostgreSQL integration health response. Browser inspection used a separate temporary Docker network, an in-memory PostgreSQL cluster, and synthetic multi-month transactions. Hebrew rendered RTL in the dark theme and English rendered LTR in the light theme at 1280 pixels and 390 pixels with no page-level horizontal overflow; the mobile transaction table retained its intentional local horizontal scroll. The preview containers, network, account, and synthetic financial rows were removed afterwards, and the owner's existing development containers remained healthy and unchanged.
 
 ## Foundation completion
 

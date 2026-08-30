@@ -141,6 +141,7 @@ export default function TransactionsView({ locale, onImportRequested }: Transact
               <tr>
                 <th scope="col">{t("table.purchaseDate")}</th>
                 <th scope="col">{t("table.merchant")}</th>
+                <th scope="col">{t("table.originalAmount")}</th>
                 <th scope="col">{t("table.billedAmount")}</th>
                 <th scope="col">{t("table.installment")}</th>
                 <th scope="col">{t("table.tags")}</th>
@@ -151,6 +152,9 @@ export default function TransactionsView({ locale, onImportRequested }: Transact
                 <tr key={row.id}>
                   <td>{formatDate(locale, row.purchaseDate)}</td>
                   <td>{row.merchant}</td>
+                  <td className="table__amount">
+                    {formatMoney(locale, row.originalMinorUnits, row.originalCurrency)}
+                  </td>
                   <td
                     className={`table__amount${
                       row.kind === "refund" || row.billedMinorUnits < 0
