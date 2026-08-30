@@ -3,6 +3,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../../src/web/App.tsx";
+import { formatMoney } from "../../src/web/format.ts";
 import he from "../../src/locales/he/common.json" with { type: "json" };
 
 // The shell imports the Better Auth client, which has no place in a transactions test.
@@ -132,6 +133,13 @@ beforeEach(() => {
   stubApi(defaultHandler);
 });
 
+async function openTransactions() {
+  const user = userEvent.setup();
+  render(<App />);
+  await user.click(await screen.findByRole("button", { name: he.nav.transactions }));
+  return user;
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -139,8 +147,7 @@ afterEach(() => {
 
 describe("transactions view", () => {
   it("opens on the recent months and drills into one", async () => {
-    const user = userEvent.setup();
-    render(<App />);
+    const user = await openTransactions();
 
     const august = await screen.findByRole("button", {
       name: new RegExp(hebrewMonth(2026, 8)),
@@ -164,13 +171,17 @@ describe("transactions view", () => {
     const refundCell = screen
       .getByText("Electronics Store")
       .closest("tr")
-      ?.querySelector("td + td + td");
+      ?.querySelectorAll("td")[3];
     expect(refundCell?.className).toContain("table__amount--refund");
+
+    // The stored table preserves both the full original amount and this month's charge.
+    expect(screen.getByText("Airline").closest("tr")?.textContent).toContain(
+      formatMoney("he", 240_000, "ILS"),
+    );
   });
 
   it("formats a charge date without shifting it across time zones", async () => {
-    const user = userEvent.setup();
-    render(<App />);
+    const user = await openTransactions();
 
     await user.click(await screen.findByRole("button", { name: new RegExp(hebrewMonth(2026, 8)) }));
 
@@ -186,8 +197,7 @@ describe("transactions view", () => {
 
   it("invites an import when nothing has been imported yet", async () => {
     stubApi((url) => (url.startsWith("/api/summary") ? json({ months: [] }) : defaultHandler(url)));
-    const user = userEvent.setup();
-    render(<App />);
+    const user = await openTransactions();
 
     await waitFor(() => {
       expect(screen.getByText(he.transactions.noDataYet)).toBeTruthy();
@@ -198,8 +208,7 @@ describe("transactions view", () => {
   });
 
   it("says a month is empty rather than showing a blank table", async () => {
-    const user = userEvent.setup();
-    render(<App />);
+    const user = await openTransactions();
 
     await user.click(await screen.findByRole("button", { name: new RegExp(hebrewMonth(2026, 7)) }));
 
@@ -214,8 +223,7 @@ describe("transactions view", () => {
         ? json({ error: "invalid_filter" }, 400)
         : defaultHandler(url),
     );
-    const user = userEvent.setup();
-    render(<App />);
+    const user = await openTransactions();
 
     await user.click(await screen.findByRole("button", { name: new RegExp(hebrewMonth(2026, 8)) }));
 

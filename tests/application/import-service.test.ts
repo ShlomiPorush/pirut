@@ -476,6 +476,27 @@ describe("monthlySummary", () => {
   });
 });
 
+describe("insights", () => {
+  it("derives current installment commitments from committed statement data", async () => {
+    const { service } = serviceWith();
+    await service.commit(upload);
+
+    const report = await service.insights();
+
+    expect(report.importedMonthCount).toBe(1);
+    expect(report.recurringCharges).toEqual([]);
+    expect(report.installmentCommitments).toEqual([
+      expect.objectContaining({
+        installmentNumber: 2,
+        installmentTotal: 3,
+        remainingPayments: 1,
+        originalAmount: { minorUnits: 120_000, currency: "ILS" },
+        currentBilledAmount: { minorUnits: 40_000, currency: "ILS" },
+      }),
+    ]);
+  });
+});
+
 describe("resolveMonthWindow", () => {
   it("is undefined when neither bound is given", () => {
     expect(resolveMonthWindow({})).toBeUndefined();

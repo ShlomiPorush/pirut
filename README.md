@@ -4,8 +4,10 @@ Pirut is a personal-first web application for manually importing and analyzing I
 statements. It is Hebrew-first, single-user, and runs locally in Docker.
 
 Today it imports an Isracard statement file through a preview-first flow, stores the transactions
-in PostgreSQL without ever duplicating a row, and shows them by month with totals, installments,
-and refunds. Categorization, insights, and other issuers are not implemented yet.
+in PostgreSQL without ever duplicating a row, and derives recurring-charge, amount-change,
+suspected-duplicate, stopped-charge, and installment-commitment insights from the stored history.
+Transactions remain available by month with their original and billed amounts. Categorization and
+other issuers are not implemented yet.
 
 See [the living project foundation plan](docs/project-foundation.md) for approved decisions,
 implementation status, verification evidence, and remaining blockers.

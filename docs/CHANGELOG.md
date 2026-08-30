@@ -9,6 +9,10 @@ Versioning scheme selection is deferred until the first release is prepared.
 
 ### Added
 
+- A localized insights landing screen derived entirely from stored statement history. It identifies monthly recurring charges after three covered months, recurring amount changes, suspected duplicate charges, possibly stopped recurring charges, and current installment commitments with the full original purchase amount, current payment, payments left, and a clearly labelled estimate of the remaining amount.
+- Foreign recurring charges are compared in their original currency, so exchange-rate movement in the billed shekel amount does not produce a false amount-change alert.
+- A canonical project glossary in `CONTEXT.md` that separates duplicate imports from suspected duplicate charges and defines the evidence required for every recurring-charge insight.
+
 - A login. Better Auth 1.7.2 provides password hashing, sessions, cookies, CSRF, and passkeys; Pirut adds only the household policy on top. Every `/api/` route except health, the auth routes, and the setup routes now requires a session and answers 401 without one.
 - First-run setup: the first visit creates the household's first account and signs it in. Public sign-up is closed from that moment, so only a signed-in member can add another.
 - Passkeys, through the Better Auth plugin: sign in with one, and add or remove them in settings. Passkeys need HTTPS or localhost, which the settings screen states.
@@ -44,6 +48,8 @@ Versioning scheme selection is deferred until the first release is prepared.
 - Removed a vulnerable `esbuild` reached through a deprecated `drizzle-kit` loader chain, using a scoped pnpm override. The advisory affects the esbuild development server, which this project never runs, so exposure was nil, but the dependency no longer appears at all.
 
 ### Changed
+
+- Insights are now the signed-in landing screen. The monthly transactions table now shows the original amount alongside the billed amount, including the full purchase amount for installments.
 
 - `scripts/local.sh` now follows the same interface as the owner's other repositories: `up` is the default command, `-b` builds before starting, `-d` runs detached and verifies readiness, the two combine as `-bd`, and `nuke --confirm <exact path>` allows non-interactive use. Without `-b`, `up` reuses the existing image and builds only when it is absent. `up-detached` remains as an alias.
 - The repository root now holds only the files tooling must find there. Docker files moved to `config/docker/` (including the machine-local `.env` and `docker-compose-dev.yml`), the ESLint and Vitest configs to `config/`, the changelog to `docs/`, and the security policy to `.github/`. `.prettierignore` and `.node-version` were removed: Prettier exclusions are negated globs in the `format` scripts, and `engines.node` in `package.json` is the single Node version contract.
